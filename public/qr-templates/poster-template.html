@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Poster – GuestGlow</title>
+  <link rel="stylesheet" href="../eusbett-style.css" />
+  <style>
+    @page { size: A4; margin: 14mm }
+    .page { width: 210mm; min-height: 297mm; margin: 0 auto; }
+    .title { font-weight: 800; font-size: 28px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card" style="padding:20mm;">
+      <div class="header">
+        <img src="/eusbett-logo.jpeg" alt="Eusbett Logo" />
+        <div>
+          <div class="badge">Guest Feedback</div>
+          <div class="title">Scan to tell us how we did</div>
+          <div style="font-size: 12px; color:#6b7280">Anonymous. 10 seconds. Helps us improve.</div>
+        </div>
+      </div>
+
+      <div class="qr" style="margin: 18mm 0;">
+        <img id="qrImage" src="" alt="QR Code" width="300" height="300" />
+      </div>
+
+      <div class="footer" style="margin-top: 8mm;">
+        Room: <span id="roomLabel">—</span> • Area: <span id="areaLabel">—</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const room = params.get('room') || ''
+    const area = params.get('area') || ''
+    document.getElementById('roomLabel').textContent = room || 'N/A'
+    document.getElementById('areaLabel').textContent = area || 'N/A'
+
+    const base = (window.VITE_PUBLIC_BASE_URL || location.origin).replace(/\/$/, '')
+    const slug = 'eusbett'
+    const qs = new URLSearchParams()
+    if (room) qs.set('room', room)
+    if (area) qs.set('area', area)
+    const target = `${base}/${slug}/quick-feedback${qs.toString() ? `?${qs.toString()}` : ''}`
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(target)}&format=png`
+    document.getElementById('qrImage').src = qrUrl
+
+    // Auto-open print dialog if ?print=true
+    if ((params.get('print') || '').toLowerCase() === 'true') {
+      setTimeout(() => window.print(), 400)
+    }
+  </script>
+</body>
+</html>
+

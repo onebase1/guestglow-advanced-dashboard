@@ -1,0 +1,10 @@
+:root{ --brand-primary:#0B57A3; --brand-accent:#E52B2D; --brand-text:#0A2342; }
+body{ font-family: Inter, system-ui, sans-serif; color: var(--brand-text); }
+.header{ display:flex; align-items:center; gap:12px; }
+.header img{ height:36px; }
+.card{ border:1px solid #e5e7eb; border-radius:12px; padding:16px; background:#fff; box-shadow:0 1px 8px rgba(0,0,0,.06); }
+.qr{ display:flex; align-items:center; justify-content:center; padding:8px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; }
+.badge{ display:inline-block; padding:4px 8px; border-radius:9999px; font-size:12px; background:rgba(11,87,163,.08); color:#0B57A3; }
+.btn{ background:var(--brand-primary); color:#fff; padding:8px 12px; border-radius:8px; text-decoration:none; }
+.footer{ font-size:11px; color:#6b7280; }
+

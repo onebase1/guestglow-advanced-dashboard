@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Eusbett QR – GuestGlow</title>
+  <link rel="stylesheet" href="/qr-templates/eusbett-style.css" />
+</head>
+<body>
+  <div class="card" style="max-width: 420px; margin: 24px auto;">
+    <div class="header">
+      <img src="/eusbett-logo.jpeg" alt="Eusbett Logo" />
+      <div>
+        <div class="badge">Guest Feedback</div>
+        <div style="font-weight: 600; font-size: 18px;">Scan to tell us how we did</div>
+        <div style="font-size: 12px; color:#6b7280">Anonymous. 10 seconds. Helps us improve.</div>
+      </div>
+    </div>
+
+    <div class="qr" style="margin: 16px 0;">
+      <img id="qrImage" src="" alt="QR Code" width="256" height="256" />
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <a id="downloadBtn" class="btn" href="#">Download PNG</a>
+      <a id="printBtn" class="btn" href="#" style="background:#E52B2D">Print</a>
+    </div>
+
+    <div class="footer" style="margin-top:12px;">
+      Room: <span id="roomLabel">—</span> • Area: <span id="areaLabel">—</span>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const room = params.get('room') || ''
+    const area = params.get('area') || ''
+    document.getElementById('roomLabel').textContent = room || 'N/A'
+    document.getElementById('areaLabel').textContent = area || 'N/A'
+
+    const base = (window.VITE_PUBLIC_BASE_URL || location.origin).replace(/\/$/, '')
+    const slug = 'eusbett'
+    const qs = new URLSearchParams()
+    if (room) qs.set('room', room)
+    if (area) qs.set('area', area)
+    const target = `${base}/${slug}/quick-feedback${qs.toString() ? `?${qs.toString()}` : ''}`
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(target)}&format=png`
+    const img = document.getElementById('qrImage')
+    img.src = qrUrl
+
+    const dl = document.getElementById('downloadBtn')
+    dl.href = qrUrl
+    dl.download = `eusbett-feedback${room?`-room-${room}`:''}.png`
+
+    document.getElementById('printBtn').onclick = () => window.print()
+  </script>
+</body>
+</html>
+

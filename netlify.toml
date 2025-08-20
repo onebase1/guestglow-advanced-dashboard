@@ -1,0 +1,19 @@
+# Netlify build settings for GuestGlow (Git-based deploys)
+
+[build]
+  base = "."
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps"
+  # Public base URL used by QR links and routing
+  VITE_PUBLIC_BASE_URL = "https://guest-glow.com"
+
+# SPA routing (Vite/React) – serve index.html for deep links
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+

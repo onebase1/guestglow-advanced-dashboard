@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Allow: /auth
+Allow: /marketing
+
+# Disallow sensitive pages
+Disallow: /dashboard
+Disallow: /quick-feedback*
+
+# Security
+Disallow: /admin
+Disallow: /*.sql
+Disallow: /*.json
+
+Sitemap: https://guestglow.com/sitemap.xml
