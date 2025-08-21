@@ -1,0 +1,256 @@
+/* Eusbett Hotel Brand Colors and Styling */
+
+:root {
+  /* Eusbett Brand Colors */
+  --eusbett-navy: #003D7A;
+  --eusbett-red: #E74C3C;
+  --eusbett-cyan: #00B4E6;
+  --eusbett-navy-light: rgba(0, 61, 122, 0.1);
+  --eusbett-red-light: rgba(231, 76, 60, 0.1);
+  --eusbett-cyan-light: rgba(0, 180, 230, 0.1);
+  
+  /* Eusbett Gradients */
+  --eusbett-gradient-primary: linear-gradient(135deg, var(--eusbett-navy) 0%, var(--eusbett-cyan) 100%);
+  --eusbett-gradient-accent: linear-gradient(135deg, var(--eusbett-red) 0%, var(--eusbett-navy) 100%);
+  --eusbett-gradient-subtle: linear-gradient(135deg, var(--eusbett-navy-light) 0%, var(--eusbett-cyan-light) 100%);
+}
+
+/* Eusbett route-specific styling */
+body[data-tenant="eusbett"] {
+  /* HSL values for Tailwind compatibility */
+  --primary: 220 100% 24%; /* #003D7A converted to HSL */
+  --primary-foreground: 0 0% 98%;
+  --secondary: 4 90% 58%; /* #E74C3C converted to HSL */
+  --secondary-foreground: 0 0% 98%;
+  --accent: 195 100% 45%; /* #00B4E6 converted to HSL */
+  --accent-foreground: 0 0% 98%;
+  --muted: 220 100% 24% / 0.1;
+  --muted-foreground: 220 100% 24%;
+}
+
+/* Eusbett-specific component classes */
+.eusbett-primary {
+  background-color: var(--eusbett-navy);
+  color: white;
+}
+
+.eusbett-secondary {
+  background-color: var(--eusbett-red);
+  color: white;
+}
+
+.eusbett-accent {
+  background-color: var(--eusbett-cyan);
+  color: white;
+}
+
+.eusbett-text-primary {
+  color: var(--eusbett-navy);
+}
+
+.eusbett-text-secondary {
+  color: var(--eusbett-red);
+}
+
+.eusbett-text-accent {
+  color: var(--eusbett-cyan);
+}
+
+.eusbett-border-primary {
+  border-color: var(--eusbett-navy);
+}
+
+.eusbett-border-secondary {
+  border-color: var(--eusbett-red);
+}
+
+.eusbett-border-accent {
+  border-color: var(--eusbett-cyan);
+}
+
+.eusbett-gradient-bg {
+  background: var(--eusbett-gradient-primary);
+}
+
+.eusbett-gradient-text {
+  background: var(--eusbett-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Eusbett button styles */
+.eusbett-btn-primary {
+  background: var(--eusbett-navy);
+  color: white;
+  border: 1px solid var(--eusbett-navy);
+  transition: all 0.2s ease;
+}
+
+.eusbett-btn-primary:hover {
+  background: var(--eusbett-cyan);
+  border-color: var(--eusbett-cyan);
+}
+
+.eusbett-btn-secondary {
+  background: var(--eusbett-red);
+  color: white;
+  border: 1px solid var(--eusbett-red);
+  transition: all 0.2s ease;
+}
+
+.eusbett-btn-secondary:hover {
+  background: var(--eusbett-navy);
+  border-color: var(--eusbett-navy);
+}
+
+.eusbett-btn-outline {
+  background: transparent;
+  color: var(--eusbett-navy);
+  border: 1px solid var(--eusbett-navy);
+  transition: all 0.2s ease;
+}
+
+.eusbett-btn-outline:hover {
+  background: var(--eusbett-navy);
+  color: white;
+}
+
+/* Eusbett card styles */
+.eusbett-card {
+  border: 1px solid var(--eusbett-navy-light);
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 61, 122, 0.08);
+}
+
+.eusbett-card-header {
+  background: var(--eusbett-gradient-subtle);
+  border-bottom: 1px solid var(--eusbett-navy-light);
+  padding: 1rem;
+  border-radius: 12px 12px 0 0;
+}
+
+/* Eusbett form styles */
+.eusbett-input {
+  border: 1px solid var(--eusbett-navy-light);
+  border-radius: 8px;
+  padding: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.eusbett-input:focus {
+  border-color: var(--eusbett-navy);
+  box-shadow: 0 0 0 3px var(--eusbett-navy-light);
+  outline: none;
+}
+
+/* Eusbett badge styles */
+.eusbett-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--eusbett-navy-light);
+  color: var(--eusbett-navy);
+}
+
+.eusbett-badge-red {
+  background: var(--eusbett-red-light);
+  color: var(--eusbett-red);
+}
+
+.eusbett-badge-cyan {
+  background: var(--eusbett-cyan-light);
+  color: var(--eusbett-cyan);
+}
+
+/* Eusbett navigation styles */
+.eusbett-nav {
+  background: white;
+  border-bottom: 1px solid var(--eusbett-navy-light);
+  box-shadow: 0 2px 8px rgba(0, 61, 122, 0.05);
+}
+
+.eusbett-nav-link {
+  color: var(--eusbett-navy);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.eusbett-nav-link:hover {
+  background: var(--eusbett-navy-light);
+  color: var(--eusbett-navy);
+}
+
+.eusbett-nav-link.active {
+  background: var(--eusbett-navy);
+  color: white;
+}
+
+/* Eusbett sidebar styles */
+.eusbett-sidebar {
+  background: white;
+  border-right: 1px solid var(--eusbett-navy-light);
+}
+
+.eusbett-sidebar-header {
+  background: var(--eusbett-gradient-subtle);
+  border-bottom: 1px solid var(--eusbett-navy-light);
+  padding: 1rem;
+}
+
+/* Eusbett logo styles */
+.eusbett-logo {
+  height: 2rem;
+  width: auto;
+  transition: all 0.2s ease;
+}
+
+.eusbett-logo:hover {
+  transform: scale(1.05);
+}
+
+/* Eusbett responsive utilities */
+@media (max-width: 768px) {
+  .eusbett-logo {
+    height: 1.5rem;
+  }
+  
+  .eusbett-card {
+    margin: 0.5rem;
+    border-radius: 8px;
+  }
+}
+
+/* Eusbett animation utilities */
+.eusbett-fade-in {
+  animation: eusbettFadeIn 0.3s ease-in-out;
+}
+
+@keyframes eusbettFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.eusbett-pulse {
+  animation: eusbettPulse 2s infinite;
+}
+
+@keyframes eusbettPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 61, 122, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(0, 61, 122, 0);
+  }
+}

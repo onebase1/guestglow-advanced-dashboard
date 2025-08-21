@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom"
+import { useTenantBranding } from "@/hooks/useTenantBranding"
 
 export const Footer = () => {
+  const branding = useTenantBranding()
   return (
     <footer className="bg-primary text-primary-foreground border-t border-primary-foreground/10">
       <div className="container mx-auto px-4 py-8">
@@ -9,19 +11,22 @@ export const Footer = () => {
           {/* Brand section */}
           <div className="col-span-1 md:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
-              <img 
-                src="/lovable-uploads/c2a80098-fa71-470e-9d1e-eec01217f25a.png" 
-                alt="GuestGlow Logo" 
+              <img
+                src={branding.logoUrl}
+                alt={`${branding.name} Logo`}
                 className="h-8 w-auto"
               />
             </div>
             <p className="text-sm text-primary-foreground/70 max-w-md leading-relaxed">
-              Enterprise-grade guest experience management trusted by leading hospitality brands worldwide. Transform feedback into competitive advantage.
+              {branding.isEusbett
+                ? "Premium hospitality experience management for Eusbett Hotel. Delivering exceptional guest satisfaction through innovative feedback solutions."
+                : "Enterprise-grade guest experience management trusted by leading hospitality brands worldwide. Transform feedback into competitive advantage."
+              }
             </p>
             <div className="flex items-center gap-4 text-xs text-primary-foreground/50">
-              <span>© 2024 GuestGlow</span>
+              <span>© 2024 {branding.isEusbett ? branding.name : 'GuestGlow'}</span>
               <span>•</span>
-              <span>Enterprise Solutions</span>
+              <span>{branding.isEusbett ? 'Premium Service' : 'Enterprise Solutions'}</span>
             </div>
           </div>
 

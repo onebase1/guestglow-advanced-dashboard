@@ -14,6 +14,7 @@ import QuickFeedback from "./pages/QuickFeedback";
 import Dashboard from "./pages/Dashboard";
 import QRStudio from "./pages/QRStudio";
 import Marketing from "./pages/Marketing";
+import GoLiveConfiguration from "./pages/GoLiveConfiguration";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Security from "./pages/Security";
@@ -53,6 +54,11 @@ const AppContent = () => {
             <Marketing />
           </ProtectedRoute>
         } />
+        <Route path="/:tenantSlug/go-live-config" element={
+          <ProtectedRoute>
+            <GoLiveConfiguration />
+          </ProtectedRoute>
+        } />
 
         {/* Legacy protected routes for backward compatibility */}
         <Route path="/dashboard" element={
@@ -63,6 +69,11 @@ const AppContent = () => {
         <Route path="/marketing" element={
           <ProtectedRoute>
             <Marketing />
+          </ProtectedRoute>
+        } />
+        <Route path="/go-live-config" element={
+          <ProtectedRoute>
+            <GoLiveConfiguration />
           </ProtectedRoute>
         } />
 

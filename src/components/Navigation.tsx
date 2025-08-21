@@ -2,10 +2,12 @@ import { Link, useLocation } from "react-router-dom"
 import { Button } from "./ui/button"
 import { useAuth } from "@/hooks/useAuth"
 import { LogOut, MessageSquare, BarChart3, Home } from "lucide-react"
+import { useTenantBranding } from "@/hooks/useTenantBranding"
 
 export function Navigation() {
   const { user, signOut } = useAuth()
   const location = useLocation()
+  const branding = useTenantBranding()
 
   const handleSignOut = async () => {
     await signOut()
@@ -25,9 +27,22 @@ export function Navigation() {
             </div>
           )}
 
-          <div className="text-xl font-bold text-foreground">
-            Hotel Dashboard
-          </div>
+          {branding.isEusbett ? (
+            <div className="flex items-center gap-3">
+              <img
+                src={branding.logoUrl}
+                alt={branding.name}
+                className="h-8 w-auto"
+              />
+              <div className="text-xl font-bold text-primary">
+                {branding.name} Dashboard
+              </div>
+            </div>
+          ) : (
+            <div className="text-xl font-bold text-foreground">
+              Hotel Dashboard
+            </div>
+          )}
         </div>
 
         <div className="flex items-center space-x-2">

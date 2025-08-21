@@ -667,7 +667,8 @@ export default function QuickFeedback() {
                   const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${text}` : ''
                   return waLink ? (
                     <div>
-                      <a href={waLink} target="_blank" rel="noopener" className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-[var(--tenant-primary)] text-white hover:opacity-90 text-sm font-medium">
+                      <a href={waLink} target="_blank" rel="noopener" className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 text-sm font-medium transition-colors">
+                        <MessageSquare className="w-4 h-4" />
                         Message us on WhatsApp
                       </a>
                     </div>

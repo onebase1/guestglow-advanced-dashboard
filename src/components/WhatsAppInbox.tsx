@@ -16,6 +16,7 @@ interface Message {
 export default function WhatsAppInbox() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
   const [reply, setReply] = useState('')
   const [to, setTo] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
@@ -63,24 +64,61 @@ export default function WhatsAppInbox() {
   }, [])
 
   const sendReply = async () => {
-    if (!reply || !to) return
+    if (!reply || !to) {
+      console.log('WhatsApp send: Missing reply or to field', { reply, to })
+      return
+    }
 
-    // 1) send via edge function
-    await supabase.functions.invoke('whatsapp-send', {
-      body: { action: 'send_text', to, text: reply, dry_run: false }
-    })
+    if (sending) {
+      console.log('WhatsApp send: Already sending, ignoring click')
+      return
+    }
 
-    // 2) log outbound so it shows up immediately
-    await supabase.from('communication_logs').insert({
-      message_type: 'whatsapp',
-      direction: 'outbound',
-      guest_phone: to,
-      message_content: reply,
-      status: 'sent',
-      attempt_timestamp: new Date().toISOString()
-    })
+    console.log('WhatsApp send: Starting send process', { to, reply })
+    setSending(true)
 
-    setReply('')
+    try {
+      // 1) send via edge function
+      console.log('WhatsApp send: Invoking whatsapp-send function')
+      const { data, error } = await supabase.functions.invoke('whatsapp-send', {
+        body: { action: 'send_text', to, text: reply, dry_run: false }
+      })
+
+      console.log('WhatsApp send: Function response', { data, error })
+
+      if (error) {
+        console.error('WhatsApp send: Function error', error)
+        alert(`WhatsApp send failed: ${error.message}`)
+        return
+      }
+
+      // 2) log outbound so it shows up immediately
+      console.log('WhatsApp send: Logging to communication_logs')
+      const { error: logError } = await supabase.from('communication_logs').insert({
+        message_type: 'whatsapp',
+        direction: 'outbound',
+        guest_phone: to,
+        message_content: reply,
+        status: 'sent',
+        attempt_timestamp: new Date().toISOString()
+      })
+
+      if (logError) {
+        console.error('WhatsApp send: Log error', logError)
+      }
+
+      console.log('WhatsApp send: Success, clearing reply field')
+      setReply('')
+
+      // Refresh messages to show the new outbound message
+      setTimeout(load, 500)
+
+    } catch (err) {
+      console.error('WhatsApp send: Unexpected error', err)
+      alert(`WhatsApp send failed: ${err}`)
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -92,9 +130,19 @@ export default function WhatsAppInbox() {
       <CardContent>
         <div className="flex items-center gap-2 mb-4">
           <Input placeholder="To number e.g. +447557679989" value={to} onChange={e => setTo(e.target.value)} />
-          <Input placeholder="Type a reply..." value={reply} onChange={e => setReply(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendReply() }} />
-          <Button onClick={sendReply}>Send</Button>
-          <Button variant="outline" onClick={load}>Refresh</Button>
+          <Input
+            placeholder="Type a reply..."
+            value={reply}
+            onChange={e => setReply(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !sending) sendReply() }}
+            disabled={sending}
+          />
+          <Button onClick={sendReply} disabled={sending || !reply || !to}>
+            {sending ? 'Sending...' : 'Send'}
+          </Button>
+          <Button variant="outline" onClick={load} disabled={loading}>
+            {loading ? 'Loading...' : 'Refresh'}
+          </Button>
         </div>
 
         {loading ? (

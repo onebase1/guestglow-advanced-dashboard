@@ -221,9 +221,10 @@ export const DEFAULT_TENANT: Tenant = {
   id: '',
   name: 'Eusbett Hotel',
   slug: 'eusbett',
-  // Brand colors approximated from provided logo (can fine-tune if you share exact hex)
-  primary_color: '#0B57A3', // deep blue
-  secondary_color: '#E52B2D', // red accent
+  // Brand colors from Eusbett logo
+  primary_color: '#003D7A', // Navy blue (main brand color)
+  secondary_color: '#E74C3C', // Red accent
+  logo_url: '/eusbett-logo.svg',
   contact_email: 'g.basera@yahoo.com', // TESTING EMAIL - Change to robert.mensah@eusbetthotel.com for production
   contact_phone: '+233 24 479 9348',
   is_active: true

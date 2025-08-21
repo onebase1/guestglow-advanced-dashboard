@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useToast } from "@/hooks/use-toast"
 import { getCurrentUserTenant } from "@/utils/tenant"
 import { supabase } from "@/integrations/supabase/client"
+import { useTenantBranding } from "@/hooks/useTenantBranding"
 
 // Toggle this to enable/disable new signups
 const SIGNUPS_ENABLED = true
@@ -20,6 +21,7 @@ export default function Auth() {
   const { signIn, signUp } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const branding = useTenantBranding()
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -122,14 +124,16 @@ export default function Auth() {
       <Card className="w-full max-w-md bg-card border-2 border-border shadow-2xl backdrop-blur-sm">
         <CardHeader className="text-center space-y-6">
           <div className="flex justify-center">
-            <img 
-              src="/lovable-uploads/c2a80098-fa71-470e-9d1e-eec01217f25a.png" 
-              alt="GuestGlow Logo" 
-              className="h-64 w-auto brightness-110 contrast-125"
+            <img
+              src={branding.logoUrl}
+              alt={`${branding.name} Logo`}
+              className={branding.isEusbett ? "h-32 w-auto" : "h-64 w-auto brightness-110 contrast-125"}
             />
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-xl text-foreground">Hotel Management Portal</CardTitle>
+            <CardTitle className={`text-xl ${branding.isEusbett ? 'text-primary' : 'text-foreground'}`}>
+              {branding.isEusbett ? `${branding.name} Management Portal` : 'Hotel Management Portal'}
+            </CardTitle>
           </div>
           <CardDescription className="text-muted-foreground">
             Access your reputation management dashboard

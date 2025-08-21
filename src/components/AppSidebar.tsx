@@ -12,6 +12,7 @@ import {
   Settings,
   HelpCircle
 } from "lucide-react"
+import { useTenantBranding } from "@/hooks/useTenantBranding"
 
 import {
   Sidebar,
@@ -118,22 +119,43 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
   const collapsed = state === "collapsed"
   const navigate = useNavigate()
   const tenantSlug = (typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean)[0] : '')
+  const branding = useTenantBranding()
 
 
   return (
     <Sidebar className={collapsed ? "w-16" : "w-64"} collapsible="icon">
       <SidebarHeader className="border-b border-border/40">
         <div className="flex items-center gap-3 px-4 py-4">
-          <div className="h-8 w-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center">
-            <Hotel className="h-5 w-5 text-primary-foreground" />
-          </div>
-          {!collapsed && (
-            <div>
-              <h2 className="font-bold text-lg bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-                Guest Glow
-              </h2>
-              <p className="text-xs text-muted-foreground">Management Dashboard</p>
-            </div>
+          {branding.isEusbett ? (
+            <>
+              <img
+                src={branding.logoUrl}
+                alt={branding.name}
+                className="h-8 w-auto"
+              />
+              {!collapsed && (
+                <div>
+                  <h2 className={`font-bold text-lg ${branding.isEusbett ? 'text-primary' : 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent'}`}>
+                    {branding.name}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">Management Dashboard</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="h-8 w-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center">
+                <Hotel className="h-5 w-5 text-primary-foreground" />
+              </div>
+              {!collapsed && (
+                <div>
+                  <h2 className="font-bold text-lg bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                    Guest Glow
+                  </h2>
+                  <p className="text-xs text-muted-foreground">Management Dashboard</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </SidebarHeader>
