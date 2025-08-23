@@ -144,11 +144,31 @@
   </div>
 
   <script>
-    let logoDataUrl = '/eusbett-logo.jpeg'; // default to the correct hotel image you added
+    let logoDataUrl = '/eusbett-logo.svg'; // Use SVG logo for better quality
     const logoImage = new Image();
-    function setLogo(src){ logoDataUrl = src; logoImage.src = src; }
+
+    function setLogo(src) {
+      logoDataUrl = src;
+      if (src) {
+        logoImage.src = src;
+        logoImage.onerror = () => {
+          console.error('Failed to load logo:', src);
+          showStatus('Logo failed to load');
+        };
+        logoImage.onload = () => {
+          console.log('Logo loaded successfully:', src);
+          showStatus('Logo updated');
+        };
+      }
+    }
+
     setLogo(logoDataUrl);
-    const logoReady = logoImage.decode ? logoImage.decode() : new Promise(resolve => { if (logoImage.complete) resolve(); else logoImage.onload = () => resolve(); });
+    const logoReady = logoImage.decode ?
+      logoImage.decode().catch(e => console.error('Logo decode error:', e)) :
+      new Promise(resolve => {
+        if (logoImage.complete) resolve();
+        else logoImage.onload = () => resolve();
+      });
     document.getElementById('logo-upload').addEventListener('change', async (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
@@ -156,7 +176,7 @@
       reader.onload = () => setLogo(reader.result);
       reader.readAsDataURL(file);
     });
-    document.getElementById('use-default-logo').addEventListener('click', () => setLogo('/eusbett-logo.jpeg'));
+    document.getElementById('use-default-logo').addEventListener('click', () => setLogo('/eusbett-logo.svg'));
     document.getElementById('remove-logo').addEventListener('click', () => setLogo(''));
 
 
@@ -204,17 +224,34 @@
         const bitmap = await createImageBitmap(blob);
         ctx.clearRect(0, 0, size, size);
         ctx.drawImage(bitmap, 0, 0, size, size);
-        if (logoDataUrl) {
-          const logoRatio = 0.267; const logoSize = size * logoRatio;
-          const x = (size - logoSize) / 2; const y = (size - logoSize) / 2;
-          const pad = logoSize * 0.2; const bgSize = logoSize + pad;
-          const bgX = (size - bgSize) / 2; const bgY = (size - bgSize) / 2; const radius = bgSize * 0.12;
-          ctx.fillStyle = '#FFFFFF'; ctx.beginPath();
-          ctx.moveTo(bgX + radius, bgY); ctx.lineTo(bgX + bgSize - radius, bgY); ctx.quadraticCurveTo(bgX + bgSize, bgY, bgX + bgSize, bgY + radius);
-          ctx.lineTo(bgX + bgSize, bgY + bgSize - radius); ctx.quadraticCurveTo(bgX + bgSize, bgY + bgSize, bgX + bgSize - radius, bgY + bgSize);
-          ctx.lineTo(bgX + radius, bgY + bgSize); ctx.quadraticCurveTo(bgX, bgY + bgSize, bgX, bgY + bgSize - radius);
-          ctx.lineTo(bgX, bgY + radius); ctx.quadraticCurveTo(bgX, bgY, bgX + radius, bgY); ctx.closePath(); ctx.fill();
-          await logoReady; ctx.drawImage(logoImage, x, y, logoSize, logoSize);
+        if (logoDataUrl && logoImage.complete) {
+          try {
+            const logoRatio = 0.267; const logoSize = size * logoRatio;
+            const x = (size - logoSize) / 2; const y = (size - logoSize) / 2;
+            const pad = logoSize * 0.2; const bgSize = logoSize + pad;
+            const bgX = (size - bgSize) / 2; const bgY = (size - bgSize) / 2; const radius = bgSize * 0.12;
+
+            // Draw white rounded background for logo
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.moveTo(bgX + radius, bgY);
+            ctx.lineTo(bgX + bgSize - radius, bgY);
+            ctx.quadraticCurveTo(bgX + bgSize, bgY, bgX + bgSize, bgY + radius);
+            ctx.lineTo(bgX + bgSize, bgY + bgSize - radius);
+            ctx.quadraticCurveTo(bgX + bgSize, bgY + bgSize, bgX + bgSize - radius, bgY + bgSize);
+            ctx.lineTo(bgX + radius, bgY + bgSize);
+            ctx.quadraticCurveTo(bgX, bgY + bgSize, bgX, bgY + bgSize - radius);
+            ctx.lineTo(bgX, bgY + radius);
+            ctx.quadraticCurveTo(bgX, bgY, bgX + radius, bgY);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw logo
+            await logoReady;
+            ctx.drawImage(logoImage, x, y, logoSize, logoSize);
+          } catch (logoError) {
+            console.error('Error drawing logo:', logoError);
+          }
         }
       } catch (e) { console.error('QR draw error', e); }
     }
@@ -355,7 +392,12 @@
     });
 
     function downloadCanvas(canvasId, filename) { const canvas = document.getElementById(canvasId); const link = document.createElement('a'); link.href = canvas.toDataURL('image/png'); link.download = filename; link.click(); }
-    function clearOutput() { document.getElementById('qr-output').innerHTML = ''; showStatus('Cleared all QR codes'); }
+    function clearOutput() {
+      const output = document.getElementById('qr-output');
+      const count = output.children.length;
+      output.innerHTML = '';
+      showStatus(count > 0 ? `Cleared ${count} QR codes` : 'No QR codes to clear');
+    }
     function showStatus(message) { const s = document.getElementById('status'); s.textContent = message; s.style.display = 'block'; setTimeout(()=>{ s.style.display='none'; }, 2000); }
     window.addEventListener('load', ()=> showStatus('QR Generator ready!'))
   </script>

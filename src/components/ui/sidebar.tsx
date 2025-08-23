@@ -2,6 +2,7 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
 import { PanelLeft } from "lucide-react"
+import { motion } from "framer-motion"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -733,8 +734,98 @@ const SidebarMenuSubButton = React.forwardRef<
 })
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton"
 
+// New components inspired by the example
+const SidebarBody = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div">
+>(({ className, children, ...props }, ref) => {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex flex-col h-full w-full",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+})
+SidebarBody.displayName = "SidebarBody"
+
+// New Sidebar component inspired by the example
+const NewSidebar = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div"> & {
+    open?: boolean
+    setOpen?: (open: boolean) => void
+    animate?: boolean
+  }
+>(({ open, setOpen, animate = true, className, children, ...props }, ref) => {
+  return (
+    <motion.div
+      className={cn(
+        "h-full px-4 py-4 hidden md:flex md:flex-col bg-neutral-100 dark:bg-neutral-800 w-[300px] flex-shrink-0",
+        className
+      )}
+      animate={{
+        width: animate ? (open ? "300px" : "60px") : "300px",
+      }}
+      onMouseEnter={() => setOpen && setOpen(true)}
+      onMouseLeave={() => setOpen && setOpen(false)}
+      ref={ref}
+      {...props}
+    >
+      {children}
+    </motion.div>
+  )
+})
+NewSidebar.displayName = "NewSidebar"
+
+interface SidebarLinkProps {
+  link: {
+    label: string
+    href: string
+    icon: React.ReactNode
+  }
+  className?: string
+}
+
+const SidebarLink = React.forwardRef<
+  HTMLAnchorElement,
+  SidebarLinkProps
+>(({ link, className, ...props }, ref) => {
+  const { open } = useSidebar()
+
+  return (
+    <a
+      ref={ref}
+      href={link.href}
+      className={cn(
+        "flex items-center justify-start gap-2 group/sidebar-link py-2 px-3 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors",
+        className
+      )}
+      {...props}
+    >
+      {link.icon}
+      <motion.span
+        animate={{
+          display: open ? "inline-block" : "none",
+          opacity: open ? 1 : 0,
+        }}
+        className="text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar-link:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+      >
+        {link.label}
+      </motion.span>
+    </a>
+  )
+})
+SidebarLink.displayName = "SidebarLink"
+
 export {
   Sidebar,
+  SidebarBody,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
@@ -744,6 +835,7 @@ export {
   SidebarHeader,
   SidebarInput,
   SidebarInset,
+  SidebarLink,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuBadge,

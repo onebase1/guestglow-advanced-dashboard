@@ -118,8 +118,8 @@ export default function QuickFeedback() {
       if (feedbackId) {
         const emailPayload = {
           feedback_id: feedbackId,
-          guest_name: 'QR Code Guest',
-          guest_email: null,
+          guest_name: formData.guestName || 'QR Code Guest',
+          guest_email: formData.guestEmail || null, // Include guest email if provided
           room_number: formData.roomNumber,
           rating,
           feedback_text: 'Excellent experience via QR code - 5 star rating',
@@ -211,7 +211,14 @@ export default function QuickFeedback() {
         setInlineReplyLoading(true)
         try {
           const { data } = await supabase.functions.invoke('ai-response-generator', {
-            body: { reviewText: 'Anonymous low rating feedback - guest chose not to provide details', rating, isExternal: false, guestName: 'Anonymous Guest' }
+            body: {
+              reviewText: 'Anonymous low rating feedback - guest chose not to provide details',
+              rating,
+              isExternal: false,
+              guestName: 'Anonymous Guest',
+              tenant_id: tenant.id,
+              tenant_slug: tenant.slug
+            }
           })
           setInlineReply(data?.response || null)
         } catch (_) {
@@ -225,8 +232,8 @@ export default function QuickFeedback() {
       if (feedbackId) {
         const emailPayload = {
           feedback_id: feedbackId,
-          guest_name: 'Anonymous Guest',
-          guest_email: null,
+          guest_name: formData.guestName || 'Anonymous Guest',
+          guest_email: formData.guestEmail || null, // Include guest email if provided
           room_number: formData.roomNumber,
           rating,
           feedback_text: 'Anonymous low rating feedback - guest chose not to provide details',
@@ -335,7 +342,14 @@ export default function QuickFeedback() {
         setInlineReplyLoading(true)
         try {
           const { data } = await supabase.functions.invoke('ai-response-generator', {
-            body: { reviewText: formData.feedbackText, rating, isExternal: false, guestName: formData.guestName || 'Guest' }
+            body: {
+              reviewText: formData.feedbackText,
+              rating,
+              isExternal: false,
+              guestName: formData.guestName || 'Guest',
+              tenant_id: tenant.id,
+              tenant_slug: tenant.slug
+            }
           })
           setInlineReply(data?.response || null)
         } catch (_) {

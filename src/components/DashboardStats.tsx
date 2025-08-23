@@ -24,53 +24,53 @@ interface DashboardStatsProps {
 
 export function DashboardStats({ stats }: DashboardStatsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <Card className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 p-0 mb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Reviews</CardTitle>
+          <MessageSquare className="h-4 w-4 text-gray-400" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{((stats?.totalFeedback || 0) + (stats?.externalReviews || 0))}</div>
-          <div className="flex items-center mt-1">
+        <CardContent className="p-0">
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{((stats?.totalFeedback || 0) + (stats?.externalReviews || 0))}</div>
+          <div className="flex items-center mt-2">
             <StarRating rating={stats?.averageRating || 0} size="sm" />
-            <span className="ml-2 text-sm text-muted-foreground">
+            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
               {stats?.averageRating?.toFixed(1) || '0.0'} avg
             </span>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">High Ratings</CardTitle>
-          <TrendingUp className="h-4 w-4 text-success" />
+      <Card className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 p-0 mb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">High Ratings</CardTitle>
+          <TrendingUp className="h-4 w-4 text-green-500" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-success">{(stats?.highRatings || 0)}</div>
-          <p className="text-xs text-muted-foreground">4-5 star ratings</p>
+        <CardContent className="p-0">
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{(stats?.highRatings || 0)}</div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">5 star ratings</p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Issues to Address</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-warning" />
+      <Card className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 p-0 mb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Issues Reported</CardTitle>
+          <AlertTriangle className="h-4 w-4 text-orange-500" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-warning">{(stats?.lowRatings || 0)}</div>
-          <p className="text-xs text-muted-foreground">1-4 star ratings</p>
+        <CardContent className="p-0">
+          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{(stats?.lowRatings || 0)}</div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">1-4 star ratings</p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Guest Responses</CardTitle>
-          <MessageSquare className="h-4 w-4 text-primary" />
+      <Card className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 p-0 mb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Guest Responses</CardTitle>
+          <MessageSquare className="h-4 w-4 text-blue-500" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-primary">{stats?.responseSent || 0}</div>
-          <p className="text-xs text-muted-foreground">
+        <CardContent className="p-0">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats?.responseSent || 0}</div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             {stats?.pendingResponse || 0} awaiting response
           </p>
         </CardContent>

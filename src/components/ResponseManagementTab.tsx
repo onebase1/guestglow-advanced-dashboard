@@ -150,25 +150,108 @@ export function ResponseManagementTab({ onStatusUpdate }: ResponseManagementTabP
 
   const triggerResponseRegeneration = async (responseId: string, rejectionReason?: string) => {
     try {
-      // Call N8N webhook to regenerate response
-      const response = await fetch('https://your-n8n-instance.com/webhook/regenerate-response', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          response_id: responseId,
+      // Get the original response data to regenerate
+      const { data: responseData, error: fetchError } = await supabase
+        .from('review_responses')
+        .select(`
+          *,
+          external_reviews (
+            id,
+            provider,
+            author_name,
+            review_rating,
+            review_text,
+            review_date,
+            sentiment
+          )
+        `)
+        .eq('id', responseId)
+        .single();
+
+      if (fetchError || !responseData) {
+        throw new Error('Failed to fetch response data');
+      }
+
+      const review = responseData.external_reviews;
+
+      // Extract specific issues from review text for personalized responses
+      const reviewText = review.review_text.toLowerCase();
+      const issues = [];
+
+      // Common issue detection
+      if (reviewText.includes('wifi') || reviewText.includes('internet')) issues.push('WiFi connectivity');
+      if (reviewText.includes('breakfast')) issues.push('breakfast service');
+      if (reviewText.includes('room service')) issues.push('room service timing');
+      if (reviewText.includes('clean') || reviewText.includes('dirty')) issues.push('room cleanliness');
+      if (reviewText.includes('air condition') || reviewText.includes('ac')) issues.push('air conditioning');
+      if (reviewText.includes('staff') || reviewText.includes('service')) issues.push('staff service');
+      if (reviewText.includes('shower') || reviewText.includes('water pressure')) issues.push('water pressure');
+      if (reviewText.includes('noise') || reviewText.includes('loud')) issues.push('noise levels');
+
+      // Create specific acknowledgment text
+      const issueText = issues.length > 0
+        ? `the specific issues you raised regarding **${issues.join(', ')}**`
+        : 'the concerns you experienced during your stay';
+
+      // Professional response template with proper formatting
+      let newResponseText = `Dear ${review.author_name || 'Valued Guest'},
+
+**Thank you for taking the time to share your valuable feedback with us.** We deeply appreciate your candid review as it helps us identify areas where we can enhance our service delivery.
+
+I sincerely apologize for ${issueText}. This does not reflect the **exceptional standards we strive to maintain**, and we take full responsibility for not meeting your expectations. We have immediately addressed these concerns with our team and have implemented enhanced protocols to ensure better service delivery for all our guests.
+
+Your feedback is instrumental in our continuous improvement efforts, and we would be honored to welcome you back to demonstrate the improvements we've made. Please feel free to contact me directly at **guestrelations@eusbetthotel.com** for your next visit, and I will personally ensure your experience exceeds expectations.
+
+**Warm regards,**
+The Eusbett Hotel Guest Relations Team`;
+
+      // Add character count footer
+      newResponseText += `
+
+---
+*Ready for platform posting* • **${newResponseText.length + 50} characters**`;
+
+      // Mark current response as rejected and insert new draft
+      await supabase
+        .from('review_responses')
+        .update({
+          status: 'rejected',
           rejection_reason: rejectionReason,
-          timestamp: new Date().toISOString()
+          rejected_at: new Date().toISOString()
         })
+        .eq('id', responseId);
+
+      // Insert new draft response
+      const { error: insertError } = await supabase
+        .from('review_responses')
+        .insert({
+          external_review_id: review.id,
+          response_text: newResponseText,
+          status: 'draft',
+          ai_model_used: 'regenerated-template',
+          response_version: (responseData.response_version || 1) + 1,
+          priority: review.review_rating <= 2 ? 'high' : 'normal'
+        });
+
+      if (insertError) {
+        throw new Error('Failed to create new response');
+      }
+
+      toast({
+        title: "Response Regenerated",
+        description: "New draft response created with improved formatting and specific issue acknowledgment",
       });
 
-      if (response.ok) {
-        toast({
-          title: "Regeneration Triggered",
-          description: "AI will generate a new response based on your feedback",
-        });
-      }
+      // Reload responses to show the new draft
+      loadResponses();
+
     } catch (error) {
-      console.error('Error triggering regeneration:', error);
+      console.error('Error regenerating response:', error);
+      toast({
+        title: "Regeneration Failed",
+        description: "Failed to generate new response. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 

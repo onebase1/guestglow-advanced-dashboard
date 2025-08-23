@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Debug - GuestGlow</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .debug-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-good { color: #059669; }
+        .status-bad { color: #dc2626; }
+        .code { 
+            background: #f1f5f9; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace;
+            word-break: break-all;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+        .clear-btn { background: #dc2626; }
+        .clear-btn:hover { background: #b91c1c; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Supabase Debug Tool</h1>
+    <p>This page helps diagnose authentication issues with GuestGlow.</p>
+
+    <div class="debug-card">
+        <h3>📊 Current Configuration</h3>
+        <div id="config-info">Loading...</div>
+    </div>
+
+    <div class="debug-card">
+        <h3>🗄️ Browser Storage</h3>
+        <div id="storage-info">Loading...</div>
+        <button class="clear-btn" onclick="clearAllStorage()">🗑️ Clear All Storage</button>
+        <button onclick="checkStorage()">🔄 Refresh Storage Info</button>
+    </div>
+
+    <div class="debug-card">
+        <h3>🔗 Connection Test</h3>
+        <div id="connection-info">Loading...</div>
+        <button onclick="testConnection()">🧪 Test Connection</button>
+    </div>
+
+    <div class="debug-card">
+        <h3>🔐 Authentication Test</h3>
+        <div id="auth-info">Ready to test</div>
+        <input type="email" id="test-email" placeholder="Email" value="g.basera@yahoo.com">
+        <input type="password" id="test-password" placeholder="Password" value="password123">
+        <button onclick="testAuth()">🔑 Test Login</button>
+        <button onclick="resetPassword()">🔄 Reset Password</button>
+        <button onclick="createTestUser()">👤 Create Test User</button>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Hardcoded configuration (same as in app)
+        const SUPABASE_URL = "https://wzfpltamwhkncxjvulik.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbmN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk";
+
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function updateConfigInfo() {
+            const configDiv = document.getElementById('config-info');
+            configDiv.innerHTML = `
+                <p><strong>Supabase URL:</strong> <span class="code">${SUPABASE_URL}</span></p>
+                <p><strong>Environment Variables:</strong></p>
+                <div class="code">
+                    VITE_SUPABASE_URL: ${window.VITE_SUPABASE_URL || 'undefined'}<br>
+                    VITE_SUPABASE_ANON_KEY: ${window.VITE_SUPABASE_ANON_KEY ? '[PRESENT]' : 'undefined'}
+                </div>
+                <p><strong>Current Domain:</strong> <span class="code">${window.location.origin}</span></p>
+            `;
+        }
+
+        function checkStorage() {
+            const storageDiv = document.getElementById('storage-info');
+            const localStorage = window.localStorage;
+            const sessionStorage = window.sessionStorage;
+            
+            let localStorageItems = [];
+            let sessionStorageItems = [];
+            
+            // Check localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.includes('supabase') || key.includes('auth')) {
+                    localStorageItems.push(`${key}: ${localStorage.getItem(key).substring(0, 100)}...`);
+                }
+            }
+            
+            // Check sessionStorage
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key.includes('supabase') || key.includes('auth')) {
+                    sessionStorageItems.push(`${key}: ${sessionStorage.getItem(key).substring(0, 100)}...`);
+                }
+            }
+
+            storageDiv.innerHTML = `
+                <p><strong>LocalStorage (Auth-related):</strong></p>
+                <div class="code">${localStorageItems.length ? localStorageItems.join('<br>') : 'No auth-related items'}</div>
+                <p><strong>SessionStorage (Auth-related):</strong></p>
+                <div class="code">${sessionStorageItems.length ? sessionStorageItems.join('<br>') : 'No auth-related items'}</div>
+            `;
+        }
+
+        async function testConnection() {
+            const connectionDiv = document.getElementById('connection-info');
+            connectionDiv.innerHTML = 'Testing connection...';
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                if (response.ok) {
+                    connectionDiv.innerHTML = `<span class="status-good">✅ Connection successful!</span><br>Status: ${response.status}`;
+                } else {
+                    connectionDiv.innerHTML = `<span class="status-bad">❌ Connection failed!</span><br>Status: ${response.status}<br>URL: ${SUPABASE_URL}`;
+                }
+            } catch (error) {
+                connectionDiv.innerHTML = `<span class="status-bad">❌ Connection error!</span><br>Error: ${error.message}`;
+            }
+        }
+
+        async function testAuth() {
+            const authDiv = document.getElementById('auth-info');
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+
+            if (!email || !password) {
+                authDiv.innerHTML = '<span class="status-bad">❌ Please enter email and password</span>';
+                return;
+            }
+
+            authDiv.innerHTML = 'Testing authentication...';
+
+            try {
+                // First, check if user exists
+                authDiv.innerHTML += '<br>Checking if user exists...';
+
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) {
+                    authDiv.innerHTML = `<span class="status-bad">❌ Auth failed!</span><br>Error: ${error.message}<br>Code: ${error.status || 'N/A'}`;
+
+                    // If it's an invalid credentials error, try to get more info
+                    if (error.message.includes('Invalid login credentials')) {
+                        authDiv.innerHTML += '<br><br>🔍 Checking user in database...';
+
+                        // Test direct database connection
+                        try {
+                            const { data: userData, error: userError } = await supabase
+                                .from('auth.users')
+                                .select('email, email_confirmed_at')
+                                .eq('email', email)
+                                .single();
+
+                            if (userError) {
+                                authDiv.innerHTML += `<br>Database check failed: ${userError.message}`;
+                            } else if (userData) {
+                                authDiv.innerHTML += `<br>✅ User found in database: ${userData.email}`;
+                                authDiv.innerHTML += `<br>Email confirmed: ${userData.email_confirmed_at ? 'Yes' : 'No'}`;
+                            } else {
+                                authDiv.innerHTML += '<br>❌ User not found in database';
+                            }
+                        } catch (dbError) {
+                            authDiv.innerHTML += `<br>Database check error: ${dbError.message}`;
+                        }
+                    }
+                } else {
+                    authDiv.innerHTML = `<span class="status-good">✅ Auth successful!</span><br>User: ${data.user.email}<br>Session: ${data.session ? 'Active' : 'None'}`;
+
+                    // Test accessing a protected resource
+                    try {
+                        const { data: profile, error: profileError } = await supabase
+                            .from('tenants')
+                            .select('*')
+                            .limit(1);
+
+                        if (profileError) {
+                            authDiv.innerHTML += `<br>⚠️ Database access failed: ${profileError.message}`;
+                        } else {
+                            authDiv.innerHTML += '<br>✅ Database access successful';
+                        }
+                    } catch (dbError) {
+                        authDiv.innerHTML += `<br>⚠️ Database test error: ${dbError.message}`;
+                    }
+                }
+            } catch (error) {
+                authDiv.innerHTML = `<span class="status-bad">❌ Auth error!</span><br>Error: ${error.message}`;
+            }
+        }
+
+        async function resetPassword() {
+            const email = document.getElementById('test-email').value;
+            if (!email) {
+                alert('Please enter an email address');
+                return;
+            }
+
+            try {
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/auth`
+                });
+
+                if (error) {
+                    alert(`Password reset failed: ${error.message}`);
+                } else {
+                    alert('Password reset email sent! Check your inbox.');
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        async function createTestUser() {
+            const email = 'test@guestglow.com';
+            const password = 'password123';
+
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        emailRedirectTo: `${window.location.origin}/auth`
+                    }
+                });
+
+                if (error) {
+                    alert(`User creation failed: ${error.message}`);
+                } else {
+                    alert(`Test user created: ${email} / ${password}`);
+                    document.getElementById('test-email').value = email;
+                    document.getElementById('test-password').value = password;
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        function clearAllStorage() {
+            if (confirm('This will clear ALL browser storage for this site. Continue?')) {
+                // Clear localStorage
+                localStorage.clear();
+
+                // Clear sessionStorage
+                sessionStorage.clear();
+
+                // Clear IndexedDB (basic attempt)
+                if ('indexedDB' in window) {
+                    indexedDB.databases().then(databases => {
+                        databases.forEach(db => {
+                            indexedDB.deleteDatabase(db.name);
+                        });
+                    });
+                }
+
+                alert('Storage cleared! Please refresh the page.');
+                window.location.reload();
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateConfigInfo();
+            checkStorage();
+            testConnection();
+        });
+    </script>
+</body>
+</html>

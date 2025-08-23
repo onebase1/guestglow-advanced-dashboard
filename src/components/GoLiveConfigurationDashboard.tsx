@@ -97,6 +97,9 @@ export default function GoLiveConfigurationDashboard() {
   const [previewMode, setPreviewMode] = useState(false)
   const { toast } = useToast()
 
+  // Add error boundary for debugging
+  const [error, setError] = useState<string | null>(null)
+
   const departments = [
     'Management',
     'Food & Beverage', 
@@ -127,23 +130,36 @@ export default function GoLiveConfigurationDashboard() {
   ]
 
   useEffect(() => {
+    console.log('GoLiveConfigurationDashboard: Starting to load configuration...')
     loadConfiguration()
   }, [])
 
   const loadConfiguration = async () => {
+    console.log('GoLiveConfigurationDashboard: loadConfiguration called')
     setLoading(true)
     try {
+      console.log('GoLiveConfigurationDashboard: Getting tenant...')
       // Get current tenant ID (assuming Eusbett for now)
-      const { data: tenant } = await supabase
+      const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
         .select('id')
         .eq('slug', 'eusbett')
         .single()
 
+      if (tenantError) {
+        console.error('GoLiveConfigurationDashboard: Tenant lookup error:', tenantError)
+        toast({
+          title: "Database Error",
+          description: "Could not connect to tenant database. Please check your connection.",
+          variant: "destructive"
+        })
+        return
+      }
+
       if (!tenant) {
         toast({
-          title: "Error",
-          description: "Could not find tenant configuration",
+          title: "Configuration Error",
+          description: "Eusbett tenant not found. Please run the database setup scripts.",
           variant: "destructive"
         })
         return
@@ -151,28 +167,38 @@ export default function GoLiveConfigurationDashboard() {
 
       const tenantId = tenant.id
 
-      // Load managers
-      const { data: managersData } = await supabase
+      // Load managers with error handling
+      const { data: managersData, error: managersError } = await supabase
         .from('manager_configurations')
         .select('*')
         .eq('tenant_id', tenantId)
         .order('is_primary', { ascending: false })
 
+      if (managersError) {
+        console.error('Managers loading error:', managersError)
+        toast({
+          title: "Database Setup Required",
+          description: "Go-Live configuration tables not found. Please run the setup scripts first.",
+          variant: "destructive"
+        })
+        return
+      }
+
       // Load category routing
-      const { data: routingData } = await supabase
+      const { data: routingData, error: routingError } = await supabase
         .from('category_routing_configurations')
         .select('*')
         .eq('tenant_id', tenantId)
 
       // Load assets
-      const { data: assetsData } = await supabase
+      const { data: assetsData, error: assetsError } = await supabase
         .from('asset_configurations')
         .select('*')
         .eq('tenant_id', tenantId)
         .eq('is_active', true)
 
       // Load email templates
-      const { data: templatesData } = await supabase
+      const { data: templatesData, error: templatesError } = await supabase
         .from('email_template_configurations')
         .select('*')
         .eq('tenant_id', tenantId)
@@ -184,7 +210,9 @@ export default function GoLiveConfigurationDashboard() {
       setEmailTemplates(templatesData || [])
 
     } catch (error) {
-      console.error('Error loading configuration:', error)
+      console.error('GoLiveConfigurationDashboard: Error loading configuration:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setError(`Failed to load configuration: ${errorMessage}`)
       toast({
         title: "Error",
         description: "Failed to load configuration data",
@@ -321,6 +349,21 @@ export default function GoLiveConfigurationDashboard() {
     }
 
     return issues
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => { setError(null); loadConfiguration(); }}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {

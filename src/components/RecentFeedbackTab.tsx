@@ -41,16 +41,40 @@ export function RecentFeedbackTab({ recentFeedback, onStatusUpdate }: RecentFeed
   const [responseModalOpen, setResponseModalOpen] = useState(false)
   const [communicationLogsOpen, setCommunicationLogsOpen] = useState(false)
   const [selectedFeedbackForLogs, setSelectedFeedbackForLogs] = useState<RecentFeedback | null>(null)
+  const [widenComments, setWidenComments] = useState(false)
   const { toast } = useToast()
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'resolved': return 'success'
       case 'RESOLVED': return 'success'
-    case 'ACKNOWLEDGED': return 'warning'
-      case 'pending_review': return 'destructive'
+      case 'ACKNOWLEDGED': return 'warning'
+      case 'ACTION_REQUIRED': return 'destructive'
+      case 'AUTO_RESPONDED': return 'secondary'
       default: return 'secondary'
     }
   }
+  const getStatusLabel = (f: RecentFeedback) => {
+    const ws = f.workflow_status?.toUpperCase()
+    if (ws === 'RESOLVED') return 'Resolved'
+    if (ws === 'ACKNOWLEDGED') return 'Acknowledged'
+    if (ws === 'ACTION_REQUIRED') return 'Action Required'
+    if (ws === 'AUTO_RESPONDED') return 'Auto Responded'
+    if (f.resolved_at) return 'Resolved'
+    if (f.response_sent_at) return 'Responded'
+    return 'New'
+  }
+
+  const getStatusDot = (f: RecentFeedback) => {
+    const ws = (f.workflow_status || '').toUpperCase()
+    if (ws === 'RESOLVED' || f.resolved_at) return 'bg-emerald-500'
+    if (ws === 'ACKNOWLEDGED') return 'bg-amber-500'
+    if (ws === 'ACTION_REQUIRED') return 'bg-rose-500'
+    if (ws === 'AUTO_RESPONDED') return 'bg-sky-500'
+    return 'bg-gray-400'
+  }
+  const gridTemplate = widenComments
+    ? 'md:grid-cols-[110px,110px,120px,110px,160px,2fr,140px,80px,130px]'
+    : 'md:grid-cols-[110px,110px,120px,110px,160px,1fr,140px,80px,130px]'
 
   const updateFeedbackStatus = async (feedbackId: string, newStatus: string) => {
     setUpdatingStatus(feedbackId)
@@ -127,123 +151,63 @@ export function RecentFeedbackTab({ recentFeedback, onStatusUpdate }: RecentFeed
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {recentFeedback.map((feedback) => (
-            <div key={feedback.id} className="group flex flex-col space-y-3 p-4 border rounded-lg hover:border-primary/30 hover:shadow-medium transition-all duration-200 sm:flex-row sm:items-start sm:space-y-0 sm:space-x-4">
-              <div className="flex-1 space-y-3">
-                <div className="flex flex-col space-y-3 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold text-base">{feedback.guest_name || 'Anonymous'}</span>
-                      <Badge variant="outline" className="text-xs">{feedback.room_number}</Badge>
-                      <StarRating rating={feedback.rating} size="sm" />
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{feedback.feedback_preview || 'No detailed feedback given'}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-medium">{feedback.issue_category}</span>
-                      <span>•</span>
-                      <span>{new Date(feedback.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 self-start">
-                    <div className="flex flex-col gap-2">
-                      {/* SLA Actions */}
-                      <div className="flex gap-2 flex-wrap">
-                        {/* Acknowledge visible if action required and not yet acknowledged */}
-                        {((feedback.workflow_status === 'ACTION_REQUIRED' || feedback.workflow_status === 'OPTIONAL_FOLLOWUP') && !feedback.acknowledged_at) && (
-                          <Button
-                            size="sm"
-                            onClick={() => updateFeedbackStatus(feedback.id, 'ACKNOWLEDGED')}
-                            disabled={updatingStatus === feedback.id}
-                            className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white"
-                          >
-                            Acknowledge
-                          </Button>
-                        )}
-
-                        {/* Resolve button */}
-                        <Button
-                          size="sm"
-                          onClick={() => updateFeedbackStatus(feedback.id, 'RESOLVED')}
-                          disabled={updatingStatus === feedback.id}
-                          className="text-xs bg-success hover:bg-success/90 text-success-foreground"
-                        >
-                          Mark Resolved
-                        </Button>
-
-                        {/* Contact guest if email */}
-                        {feedback.guest_email && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openResponseModal(feedback)}
-                            className="text-xs border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                          >
-                            Contact Guest
-                          </Button>
-                        )}
-
-                        {/* Current basic status badge (legacy) */}
-                        {feedback.status && (
-                          <Badge variant={getStatusColor(feedback.status) as any} className="self-start text-xs">
-                            {feedback.status.replace('_', ' ')}
-                          </Badge>
-                        )}
-                      </div>
-
-                      {/* Timers */}
-                      <div className="flex gap-3 text-xs text-muted-foreground">
-                        {feedback.ack_due && (
-                          <span>
-                            Ack due: {new Date(feedback.ack_due).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
-                        {feedback.resolve_due && (
-                          <span>
-                            Resolve due: {new Date(feedback.resolve_due).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
-                        {feedback.resolve_due && new Date(feedback.resolve_due) < new Date() && (
-                          <Badge variant="destructive" className="text-[10px]">Overdue</Badge>
-                        )}
-                      </div>
-
-                      {/* Follow-up status */}
-                      <div className="flex gap-3 text-xs text-muted-foreground">
-                        {feedback.followup_sent_at && (
-                          <span>
-                            Follow-up: <span className="font-medium">{feedback.followup_result || 'pending'}</span>
-                          </span>
-                        )}
-                      </div>
-
-                    </div>
-
-                    <div className="flex gap-2">
-                      {/* Communication Actions */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openCommunicationLogs(feedback)}
-                        className="text-xs h-7 px-2 text-primary hover:text-primary"
-                      >
-                        <Mail className="h-3 w-3 mr-1" />
-                        View Emails
-                      </Button>
-
-                      {/* Response Status Display */}
-                      {feedback.response_sent_at && (
-                        <div className="flex items-center gap-1 text-xs text-success">
-                          <CheckCircle className="h-3 w-3" />
-                          Response sent
-                        </div>
-                      )}
-                    </div>
-                  </div>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className={`hidden md:grid ${widenComments ? 'grid-cols-[110px,110px,120px,110px,160px,2fr,140px,80px,130px]' : 'grid-cols-[110px,110px,120px,110px,160px,1fr,140px,80px,130px]'} bg-gray-50 dark:bg-gray-800/50 text-[11px] uppercase tracking-wide text-gray-600 dark:text-gray-300 px-4 py-2`}>
+            <div className="self-center">Date</div>
+            <div className="self-center pl-3">Source</div>
+            <div className="self-center pl-3">Category</div>
+            <div className="self-center pl-3">Rating</div>
+            <div className="self-center pl-3">Guest</div>
+            <div className="self-center pl-5">Comment</div>
+            <div className="self-center">Status</div>
+            <div className="self-center">Emails</div>
+            <div className="self-center text-right">Actions</div>
+          </div>
+          <div className="divide-y divide-gray-200 dark:divide-gray-800">
+            {recentFeedback.map((feedback) => (
+              <div
+                key={feedback.id}
+                className={`grid grid-cols-1 ${gridTemplate} items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-900/80 transition`}
+              >
+                <div className="text-xs text-muted-foreground">{new Date(feedback.created_at).toLocaleDateString()}</div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px]">Internal</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground pl-3">{feedback.issue_category || 'General'}</div>
+                <div className="flex items-center gap-2 pl-3">
+                  <StarRating rating={feedback.rating} size="sm" />
+                </div>
+                <div className="text-xs text-muted-foreground truncate pl-3">{feedback.guest_name || 'Anonymous'}</div>
+                <div className="min-w-0 pr-2 pl-5">
+                  <p className="text-sm text-gray-800 dark:text-gray-200 break-words overflow-hidden line-clamp-1 md:line-clamp-2 leading-5">{feedback.feedback_preview || feedback.feedback_text || 'No details'}</p>
+                  <div className="text-[10px] text-muted-foreground mt-1 truncate leading-4">Room {feedback.room_number || '-'} • {feedback.issue_category || 'Uncategorized'}</div>
+                </div>
+                {/* Status */}
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${getStatusDot(feedback)}`} />
+                  <span className="text-xs text-muted-foreground">{getStatusLabel(feedback)}</span>
+                </div>
+                {/* Emails */}
+                <div className="flex items-center">
+                  <Button size="icon" variant="ghost" onClick={() => openCommunicationLogs(feedback)} className="h-8 w-8" title="View email history">
+                    <Mail className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Actions */}
+                <div className="flex justify-end items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => updateFeedbackStatus(feedback.id, 'RESOLVED')}
+                    disabled={updatingStatus === feedback.id}
+                    className="h-8 bg-emerald-500 hover:bg-emerald-600 text-white"
+                    title="Mark issue resolved to stop escalations"
+                  >
+                    Resolve
+                  </Button>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </CardContent>
 

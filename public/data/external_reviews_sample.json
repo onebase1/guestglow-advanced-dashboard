@@ -1,0 +1,123 @@
+[
+  {
+    "id": "g-001",
+    "place_name": "Eusbett Hotel",
+    "provider": "google",
+    "review_rating": 5,
+    "review_text": "Excellent service and very clean rooms. Staff were attentive.",
+    "author_name": "Kwame A.",
+    "review_date": "2025-08-18T10:15:00Z",
+    "sentiment": "positive",
+    "response_required": false,
+    "review_url": "https://maps.google.com/?cid=example1"
+  },
+  {
+    "id": "g-002",
+    "place_name": "Eusbett Hotel",
+    "provider": "google",
+    "review_rating": 3,
+    "review_text": "Average breakfast, but the bed was comfortable.",
+    "author_name": "Abena K.",
+    "review_date": "2025-08-17T14:22:00Z",
+    "sentiment": "neutral",
+    "response_required": false,
+    "review_url": "https://maps.google.com/?cid=example2"
+  },
+  {
+    "id": "ta-001",
+    "place_name": "Eusbett Hotel",
+    "provider": "tripadvisor",
+    "review_rating": 2,
+    "review_text": "Housekeeping missed our room one day and towels were not replaced.",
+    "author_name": "TravelGhana",
+    "review_date": "2025-08-16T09:00:00Z",
+    "sentiment": "negative",
+    "response_required": true,
+    "review_url": "https://www.tripadvisor.com/Hotel_Review-example1"
+  },
+  {
+    "id": "ta-002",
+    "place_name": "Eusbett Hotel",
+    "provider": "tripadvisor",
+    "review_rating": 4,
+    "review_text": "Nice pool and good wifi. Restaurant can improve speed.",
+    "author_name": "KofiTravels",
+    "review_date": "2025-08-15T18:30:00Z",
+    "sentiment": "positive",
+    "response_required": false,
+    "review_url": "https://www.tripadvisor.com/Hotel_Review-example2"
+  },
+  {
+    "id": "bk-001",
+    "place_name": "Eusbett Hotel",
+    "provider": "booking",
+    "review_rating": 1,
+    "review_text": "Couldn’t sleep due to noise from corridor late at night.",
+    "author_name": "Jess",
+    "review_date": "2025-08-14T22:45:00Z",
+    "sentiment": "negative",
+    "response_required": true,
+    "review_url": "https://www.booking.com/hotel/example1"
+  },
+  {
+    "id": "bk-002",
+    "place_name": "Eusbett Hotel",
+    "provider": "booking",
+    "review_rating": 4,
+    "review_text": "Spacious room and friendly staff. Would return.",
+    "author_name": "Sam",
+    "review_date": "2025-08-13T11:05:00Z",
+    "sentiment": "positive",
+    "response_required": false,
+    "review_url": "https://www.booking.com/hotel/example2"
+  },
+  {
+    "id": "fb-001",
+    "place_name": "Eusbett Hotel",
+    "provider": "facebook",
+    "review_rating": 5,
+    "review_text": "Loved the garden bar! Great vibe in the evening.",
+    "author_name": "Ama",
+    "review_date": "2025-08-12T20:00:00Z",
+    "sentiment": "positive",
+    "response_required": false,
+    "review_url": "https://facebook.com/example1"
+  },
+  {
+    "id": "fb-002",
+    "place_name": "Eusbett Hotel",
+    "provider": "facebook",
+    "review_rating": 2,
+    "review_text": "AC in our room was weak and took long to cool.",
+    "author_name": "Nana",
+    "review_date": "2025-08-11T07:50:00Z",
+    "sentiment": "negative",
+    "response_required": true,
+    "review_url": "https://facebook.com/example2"
+  },
+  {
+    "id": "tp-001",
+    "place_name": "Eusbett Hotel",
+    "provider": "trustpilot",
+    "review_rating": 4,
+    "review_text": "Smooth check-in and reliable airport pickup.",
+    "author_name": "Leslie",
+    "review_date": "2025-08-10T10:10:00Z",
+    "sentiment": "positive",
+    "response_required": false,
+    "review_url": "https://www.trustpilot.com/review/example1"
+  },
+  {
+    "id": "tp-002",
+    "place_name": "Eusbett Hotel",
+    "provider": "trustpilot",
+    "review_rating": 3,
+    "review_text": "Decent stay overall. Breakfast variety could be better.",
+    "author_name": "Zed",
+    "review_date": "2025-08-09T12:00:00Z",
+    "sentiment": "neutral",
+    "response_required": false,
+    "review_url": "https://www.trustpilot.com/review/example2"
+  }
+]
+

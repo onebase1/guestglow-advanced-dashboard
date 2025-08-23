@@ -20,12 +20,7 @@ export function Navigation() {
     <nav className="bg-card border-b border-border px-4 py-3">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          {user && tenantSlug && (
-            <div className="flex items-center space-x-2">
-              <Link to={`/${tenantSlug}/dashboard`} className="text-sm underline">Dashboard</Link>
-              <Link to={`/${tenantSlug}/qr-studio`} className="text-sm underline">QR Studio</Link>
-            </div>
-          )}
+          {/* Navigation links removed - now handled by sidebar */}
 
           {branding.isEusbett ? (
             <div className="flex items-center gap-3">

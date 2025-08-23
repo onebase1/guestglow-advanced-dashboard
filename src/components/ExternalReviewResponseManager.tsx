@@ -6,18 +6,26 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  Star, 
-  MessageSquare, 
+import { generateAutoResponse } from '@/utils/autoResponseGenerator';
+import {
+  createHumanLikeResponsePrompt,
+  getImprovedSystemPrompt,
+  PLATFORM_CONTEXTS,
+  OPENAI_CONFIG
+} from '@/config/external-review-prompts';
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  Star,
+  MessageSquare,
   Send,
   Edit3,
   AlertTriangle,
   Calendar,
   User,
-  Globe
+  Globe,
+  RefreshCw
 } from 'lucide-react';
 
 interface ExternalReview {
@@ -84,7 +92,17 @@ export default function ExternalReviewResponseManager() {
         return;
       }
 
-      setResponses((data as ReviewResponse[]) || []);
+      const responseData = (data as ReviewResponse[]) || [];
+      setResponses(responseData);
+
+      // Debug logging
+      console.log('Loaded responses:', responseData.length);
+      console.log('Status breakdown:', {
+        draft: responseData.filter(r => r.status === 'draft').length,
+        approved: responseData.filter(r => r.status === 'approved').length,
+        posted: responseData.filter(r => r.status === 'posted').length,
+        rejected: responseData.filter(r => r.status === 'rejected').length
+      });
     } catch (error) {
       console.error('Error loading responses:', error);
       toast({
@@ -94,6 +112,307 @@ export default function ExternalReviewResponseManager() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createTestDraftResponse = async () => {
+    try {
+      // First check if we have any existing external reviews to use
+      const { data: existingReviews } = await supabase
+        .from('external_reviews')
+        .select('id, review_text, guest_name')
+        .limit(1);
+
+      let reviewId;
+
+      if (!existingReviews || existingReviews.length === 0) {
+        // Get the default tenant ID (Eusbett)
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('id')
+          .eq('slug', 'eusbett')
+          .single();
+
+        if (!tenant) {
+          throw new Error('Default tenant not found');
+        }
+
+        // Create a test external review with correct column names
+        const { data: newReview, error: reviewError } = await supabase
+          .from('external_reviews')
+          .insert({
+            tenant_id: tenant.id,
+            platform: 'google',
+            platform_review_id: 'test-' + Date.now(),
+            guest_name: 'Test Guest',
+            rating: 2,
+            review_text: 'Very disappointed with our stay. The room was not clean on arrival and the shower had very low pressure. WiFi was constantly dropping out and the breakfast was cold. Staff was unhelpful when we complained. Would not recommend.',
+            review_date: new Date().toISOString().split('T')[0],
+            sentiment: 'negative'
+          })
+          .select('id')
+          .single();
+
+        if (reviewError) {
+          console.error('Review creation error:', reviewError);
+          throw reviewError;
+        }
+        reviewId = newReview.id;
+      } else {
+        reviewId = existingReviews[0].id;
+      }
+
+      // Get the default tenant ID for the response
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('slug', 'eusbett')
+        .single();
+
+      if (!tenant) {
+        throw new Error('Default tenant not found');
+      }
+
+      // Create an old-style draft response
+      const oldStyleResponse = `Dear Test Guest, We sincerely apologize for your disappointing experience. Your feedback is extremely important to us, and we are taking immediate action to address the issues you've raised. Please contact our management team directly so we can make this right. We are committed to regaining your trust and confidence. - Eusbett Hotel Management`;
+
+      const { error: responseError } = await supabase
+        .from('review_responses')
+        .insert({
+          external_review_id: reviewId,
+          response_text: oldStyleResponse,
+          status: 'draft',
+          ai_model_used: 'test-old-format',
+          response_version: 1,
+          priority: 'high',
+          tenant_id: tenant.id
+        });
+
+      if (responseError) {
+        console.error('Response creation error:', responseError);
+        throw responseError;
+      }
+
+      toast({
+        title: "✅ Test Draft Created",
+        description: "Created old-style response. Click 'Reject & Regenerate' to test the new AI system!",
+      });
+
+      loadResponses();
+    } catch (error) {
+      console.error('Error creating test draft:', error);
+      toast({
+        title: "Error",
+        description: `Failed to create test draft response: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generateImprovedResponse = async (reviewId: string) => {
+    try {
+      // Get the review details
+      const { data: review, error: reviewError } = await supabase
+        .from('external_reviews')
+        .select('*')
+        .eq('id', reviewId)
+        .single();
+
+      if (reviewError || !review) {
+        throw new Error('Review not found');
+      }
+
+      // Get tenant information
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .select('name, brand_voice, contact_email')
+        .eq('id', review.tenant_id)
+        .single();
+
+      if (tenantError || !tenant) {
+        throw new Error('Tenant not found');
+      }
+
+      // Get platform context
+      const platformContext = PLATFORM_CONTEXTS[review.platform.toLowerCase()] || PLATFORM_CONTEXTS['default'];
+
+      // Create the improved prompt
+      const responsePrompt = createHumanLikeResponsePrompt({
+        platform: review.platform,
+        platformContext,
+        guest_name: review.guest_name,
+        rating: review.rating,
+        review_text: review.review_text,
+        sentiment: review.sentiment || 'neutral',
+        tenant_name: tenant.name,
+        brand_voice: tenant.brand_voice || 'professional and friendly',
+        contact_email: tenant.contact_email || 'guestrelations@eusbetthotel.com'
+      });
+
+      // Get system prompt
+      const systemPrompt = getImprovedSystemPrompt(review.platform, platformContext);
+
+      // Call the improved SUPABASE edge function (not Netlify!)
+      const { data: result, error: functionError } = await supabase.functions.invoke('generate-external-review-response-improved', {
+        body: {
+          external_review_id: reviewId,
+          platform: review.platform,
+          guest_name: review.guest_name,
+          rating: review.rating,
+          review_text: review.review_text,
+          review_date: review.review_date,
+          sentiment: review.sentiment || 'neutral',
+          tenant_id: review.tenant_id,
+          regenerate: false
+        }
+      });
+
+      if (functionError) {
+        throw new Error(functionError.message || 'Supabase function error');
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to generate response');
+      }
+
+      // Also check for critical issues that need manager alert
+      if (review.rating <= 3) {
+        try {
+          const { data: alertResult } = await supabase.functions.invoke('external-review-critical-alert', {
+            body: {
+              external_review_id: reviewId,
+              platform: review.platform,
+              guest_name: review.guest_name,
+              rating: review.rating,
+              review_text: review.review_text,
+              review_date: review.review_date,
+              sentiment: review.sentiment || 'neutral',
+              tenant_id: review.tenant_id
+            }
+          });
+
+          if (alertResult?.critical_alert_needed) {
+            toast({
+              title: "🚨 Critical Alert Sent",
+              description: `Manager notified of serious issues (Severity: ${alertResult.severity_score}/10)`,
+              variant: "destructive",
+            });
+          }
+        } catch (alertError) {
+          console.error('Critical alert analysis failed:', alertError);
+        }
+      }
+
+      toast({
+        title: "Improved Response Generated",
+        description: "Human-like response created with varied language!",
+      });
+
+      loadResponses();
+      return result;
+
+    } catch (error) {
+      console.error('Error generating improved response:', error);
+      toast({
+        title: "Error",
+        description: `Failed to generate improved response: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const simulateNewReview = async () => {
+    try {
+      // Get the tenant ID
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('slug', 'eusbett')
+        .single();
+
+      if (!tenant) {
+        throw new Error('Tenant not found');
+      }
+
+      // Create a new external review using the correct column names
+      const reviewData = {
+        tenant_id: tenant.id,
+        platform: 'google',
+        platform_review_id: 'auto-test-' + Date.now(),
+        guest_name: 'Sarah Johnson',
+        rating: 2,
+        review_text: 'Terrible experience. Room was dirty, WiFi was constantly dropping out, and the breakfast was cold. The shower had no water pressure and the staff seemed uninterested in helping. Would not recommend this place to anyone.',
+        review_date: new Date().toISOString().split('T')[0], // Date format
+        sentiment: 'negative'
+      };
+
+      // Insert the review
+      const { data: newReview, error: reviewError } = await supabase
+        .from('external_reviews')
+        .insert(reviewData)
+        .select('id')
+        .single();
+
+      if (reviewError) {
+        console.error('Review insertion error:', reviewError);
+        throw reviewError;
+      }
+
+      toast({
+        title: "New Review Added",
+        description: "Simulated adding a new external review. Creating response...",
+      });
+
+      // Create response with improved formatting
+      const responseText = `Dear Sarah Johnson,
+
+**Thank you for taking the time to share your valuable feedback with us.** We deeply appreciate your candid review as it helps us identify areas where we can enhance our service delivery.
+
+I sincerely apologize for the specific issues you raised regarding **WiFi connectivity, room cleanliness, water pressure, breakfast service, and staff service**. This does not reflect the **exceptional standards we strive to maintain**, and we take full responsibility for not meeting your expectations. We have immediately addressed these concerns with our team and have implemented enhanced protocols to ensure better service delivery for all our guests.
+
+Your feedback is instrumental in our continuous improvement efforts, and we would be honored to welcome you back to demonstrate the improvements we've made. Please feel free to contact me directly at **guestrelations@eusbetthotel.com** for your next visit, and I will personally ensure your experience exceeds expectations.
+
+**Warm regards,**
+The Eusbett Hotel Guest Relations Team
+
+---
+*Ready for platform posting* • **1,247 characters**`;
+
+      // Insert the response
+      const { error: responseError } = await supabase
+        .from('review_responses')
+        .insert({
+          external_review_id: newReview.id,
+          response_text: responseText,
+          status: 'draft',
+          ai_model_used: 'auto-generated-improved',
+          response_version: 1,
+          tenant_id: tenant.id,
+          priority: 'high'
+        });
+
+      if (responseError) {
+        console.error('Response creation error:', responseError);
+        throw responseError;
+      }
+
+      toast({
+        title: "Auto-Response Generated",
+        description: "Response automatically created with improved formatting! Check the Pending tab.",
+      });
+
+      // Reload to show the new response
+      setTimeout(() => {
+        loadResponses();
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error simulating new review:', error);
+      toast({
+        title: "Error",
+        description: `Failed to simulate new review: ${error.message}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -112,36 +431,10 @@ export default function ExternalReviewResponseManager() {
 
       if (error) throw error;
 
-      // Then attempt to post to platform
-      try {
-        const { data: postResult, error: postError } = await supabase.functions.invoke('post-platform-response', {
-          body: {
-            response_id: responseId,
-            force_post: true // For demo purposes
-          }
-        });
-
-        if (postError) {
-          console.error('Platform posting error:', postError);
-          toast({
-            title: "Approved with Warning",
-            description: "Response approved but failed to post to platform. You can retry posting later.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Success",
-            description: `Response approved and posted to ${postResult.platform}!`,
-          });
-        }
-      } catch (postError) {
-        console.error('Platform posting error:', postError);
-        toast({
-          title: "Approved with Warning",
-          description: "Response approved but failed to post to platform.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Response Approved",
+        description: "Response approved! You can now copy it and manually post to the platform. Mark as 'Posted' when done.",
+      });
 
       loadResponses();
       setManagerNotes('');
@@ -155,9 +448,59 @@ export default function ExternalReviewResponseManager() {
     }
   };
 
-  const handleReject = async (responseId: string) => {
+  const handleMarkAsPosted = async (responseId: string) => {
     try {
       const { error } = await supabase
+        .from('review_responses')
+        .update({
+          status: 'posted',
+          posted_at: new Date().toISOString()
+        })
+        .eq('id', responseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Response marked as posted!",
+      });
+
+      loadResponses();
+    } catch (error) {
+      console.error('Error marking as posted:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark response as posted",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReject = async (responseId: string) => {
+    try {
+      // First, get the response details to find the external review
+      const { data: responseData, error: fetchError } = await supabase
+        .from('review_responses')
+        .select(`
+          external_review_id,
+          external_reviews!inner(
+            id,
+            platform,
+            guest_name,
+            rating,
+            review_text,
+            review_date,
+            sentiment,
+            tenant_id
+          )
+        `)
+        .eq('id', responseId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Mark current response as rejected
+      const { error: rejectError } = await supabase
         .from('review_responses')
         .update({
           status: 'rejected',
@@ -167,11 +510,50 @@ export default function ExternalReviewResponseManager() {
         })
         .eq('id', responseId);
 
-      if (error) throw error;
+      if (rejectError) throw rejectError;
+
+      // Generate new improved response using the AI function
+      const review = responseData.external_reviews;
+
+      const { data: result, error: functionError } = await supabase.functions.invoke('generate-external-review-response-improved', {
+        body: {
+          external_review_id: review.id,
+          platform: review.platform,
+          guest_name: review.guest_name,
+          rating: review.rating,
+          review_text: review.review_text,
+          review_date: review.review_date,
+          sentiment: review.sentiment || 'neutral',
+          tenant_id: review.tenant_id,
+          regenerate: true // This is a regeneration
+        }
+      });
+
+      if (functionError) {
+        console.error('Function error:', functionError);
+        toast({
+          title: "Response Rejected",
+          description: "Response rejected. Auto-regeneration failed - please generate manually.",
+          variant: "destructive",
+        });
+        loadResponses();
+        return;
+      }
+
+      if (!result.success) {
+        console.error('Response generation failed:', result.error);
+        toast({
+          title: "Response Rejected",
+          description: "Response rejected. Auto-regeneration failed - please generate manually.",
+          variant: "destructive",
+        });
+        loadResponses();
+        return;
+      }
 
       toast({
-        title: "Success",
-        description: "Response rejected. A new response will be generated.",
+        title: "✨ Improved Response Generated",
+        description: "Response rejected and new human-like draft created!",
       });
 
       loadResponses();
@@ -279,9 +661,14 @@ export default function ExternalReviewResponseManager() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">External Review Response Manager</h1>
-        <Button onClick={loadResponses} variant="outline">
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          {/* REMOVED SIMULATE BUTTONS FOR GO-LIVE PRODUCTION MODE */}
+          {/* Production mode: Only show essential management buttons */}
+          <Button onClick={loadResponses} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -356,6 +743,7 @@ export default function ExternalReviewResponseManager() {
               onSaveEdit={handleSaveEdit}
               onApprove={handleApprove}
               onReject={handleReject}
+              onMarkAsPosted={handleMarkAsPosted}
               setEditedText={setEditedText}
               setManagerNotes={setManagerNotes}
               setEditingResponse={setEditingResponse}
@@ -388,6 +776,7 @@ export default function ExternalReviewResponseManager() {
               onSaveEdit={() => {}}
               onApprove={() => {}}
               onReject={() => {}}
+              onMarkAsPosted={handleMarkAsPosted}
               setEditedText={() => {}}
               setManagerNotes={() => {}}
               setEditingResponse={() => {}}
@@ -436,6 +825,7 @@ export default function ExternalReviewResponseManager() {
               onSaveEdit={handleSaveEdit}
               onApprove={handleApprove}
               onReject={handleReject}
+              onMarkAsPosted={handleMarkAsPosted}
               setEditedText={setEditedText}
               setManagerNotes={setManagerNotes}
               setEditingResponse={setEditingResponse}
@@ -461,6 +851,7 @@ interface ResponseCardProps {
   onSaveEdit: (id: string) => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onMarkAsPosted?: (id: string) => void;
   setEditedText: (text: string) => void;
   setManagerNotes: (notes: string) => void;
   setEditingResponse: (id: string | null) => void;
@@ -480,6 +871,7 @@ function ResponseCard({
   onSaveEdit,
   onApprove,
   onReject,
+  onMarkAsPosted,
   setEditedText,
   setManagerNotes,
   setEditingResponse,
@@ -565,19 +957,70 @@ function ResponseCard({
               </div>
             </div>
           ) : (
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-gray-700">{response.response_text}</p>
-              {!readOnly && response.status === 'draft' && (
-                <Button
-                  onClick={() => onEdit(response.id, response.response_text)}
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2"
-                >
-                  <Edit3 className="w-4 h-4 mr-2" />
-                  Edit Response
-                </Button>
-              )}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="text-gray-700 whitespace-pre-line">
+                {response.response_text.split('**').map((part, index) =>
+                  index % 2 === 0 ? (
+                    <span key={index}>{part}</span>
+                  ) : (
+                    <strong key={index}>{part}</strong>
+                  )
+                )}
+              </div>
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-blue-200">
+                <div className="flex space-x-2">
+                  {!readOnly && response.status === 'draft' && (
+                    <Button
+                      onClick={() => onEdit(response.id, response.response_text)}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <Edit3 className="w-4 h-4 mr-2" />
+                      Edit Response
+                    </Button>
+                  )}
+                  {response.status === 'approved' && (
+                    <>
+                      <Button
+                        onClick={async () => {
+                          try {
+                            // Extract clean response text without footer
+                            const cleanText = response.response_text.split('---')[0].trim();
+                            await navigator.clipboard.writeText(cleanText);
+                            // Show success feedback
+                            const button = document.activeElement as HTMLButtonElement;
+                            const originalText = button.textContent;
+                            button.textContent = '✅ Copied!';
+                            setTimeout(() => {
+                              button.textContent = originalText;
+                            }, 2000);
+                          } catch (error) {
+                            console.error('Failed to copy:', error);
+                            alert('Failed to copy to clipboard. Please select and copy manually.');
+                          }
+                        }}
+                        variant="outline"
+                        size="sm"
+                      >
+                        📋 Copy Response
+                      </Button>
+                      {onMarkAsPosted && (
+                        <Button
+                          onClick={() => onMarkAsPosted(response.id)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                          size="sm"
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          Mark as Posted
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+                <span className="text-xs text-gray-500">
+                  {response.response_text.length} characters
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -605,7 +1048,7 @@ function ResponseCard({
                 className="bg-green-600 hover:bg-green-700"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Approve & Post
+                Approve
               </Button>
               <Button
                 onClick={() => onReject(response.id)}
