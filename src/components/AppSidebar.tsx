@@ -40,7 +40,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
   const links = [
     {
       label: "Internal Reviews",
-      href: "#",
+      href: tenantSlug ? `/${tenantSlug}/dashboard` : "/dashboard",
       icon: (
         <MessageSquare className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -48,7 +48,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
     },
     {
       label: "External Reviews",
-      href: "#",
+      href: tenantSlug ? `/${tenantSlug}/dashboard` : "/dashboard",
       icon: (
         <Globe className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -56,7 +56,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
     },
     {
       label: "Response Manager",
-      href: "#",
+      href: tenantSlug ? `/${tenantSlug}/dashboard` : "/dashboard",
       icon: (
         <MessageSquare className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -64,7 +64,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
     },
     {
       label: "Inbox",
-      href: "#",
+      href: tenantSlug ? `/${tenantSlug}/dashboard` : "/dashboard",
       icon: (
         <MessageCircle className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -72,7 +72,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
     },
     {
       label: "Analytics",
-      href: "#",
+      href: tenantSlug ? `/${tenantSlug}/dashboard` : "/dashboard",
       icon: (
         <BarChart3 className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -80,7 +80,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
     },
     {
       label: "AI Insights",
-      href: "#",
+      href: tenantSlug ? `/${tenantSlug}/dashboard` : "/dashboard",
       icon: (
         <Brain className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -140,7 +140,9 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
                   } else if (link.id === "go-live-config" && tenantSlug) {
                     navigate(`/${tenantSlug}/go-live-config`)
                   } else {
-                    onTabChange(link.id)
+                    // Navigate to dashboard with the specific tab
+                    const dashboardUrl = tenantSlug ? `/${tenantSlug}/dashboard` : "/dashboard"
+                    navigate(`${dashboardUrl}?tab=${link.id}`)
                   }
                 }}
                 className={cn(

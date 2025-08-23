@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import SimpleGoLiveForm from '@/components/SimpleGoLiveForm'
+// import SimpleGoLiveForm from '@/components/SimpleGoLiveForm' // Temporarily disabled
 import { AppSidebar } from "@/components/AppSidebar"
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -74,8 +74,12 @@ export default function GoLiveConfiguration() {
 
           {/* Page Content */}
           <div className="p-6">
-            {/* Simple Go-Live Form */}
-            <SimpleGoLiveForm />
+            {/* Simple Go-Live Form - Temporarily disabled due to syntax errors */}
+            <div className="text-center p-8">
+              <h2 className="text-xl font-semibold mb-4">Go-Live Configuration</h2>
+              <p className="text-gray-600">Configuration form temporarily disabled for debugging.</p>
+            </div>
+            {/* <SimpleGoLiveForm /> */}
           </div>
         </SidebarInset>
       </div>

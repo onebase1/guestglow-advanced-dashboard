@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useSearchParams } from "react-router-dom"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingState } from "@/components/ui/loading-state"
 import { supabase } from "@/integrations/supabase/client"
@@ -59,7 +59,8 @@ interface ExternalReview {
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth()
   const { tenantSlug } = useParams<{ tenantSlug?: string }>()
-  const [activeTab, setActiveTab] = useState("internal")
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "internal")
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentFeedback, setRecentFeedback] = useState<RecentFeedback[]>([])
   const [externalReviews, setExternalReviews] = useState<ExternalReview[]>([])

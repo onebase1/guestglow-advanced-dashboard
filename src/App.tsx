@@ -44,7 +44,7 @@ const AppContent = () => {
             <Dashboard />
           </ProtectedRoute>
         } />
-        <Route path=":tenantSlug/qr-studio" element={
+        <Route path="/:tenantSlug/qr-studio" element={
           <ProtectedRoute>
             <QRStudio />
           </ProtectedRoute>
