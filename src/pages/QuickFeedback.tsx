@@ -114,28 +114,9 @@ export default function QuickFeedback() {
 
       setStep(5) // Thank you step
 
-      // Generate AI emails asynchronously in the background
-      if (feedbackId) {
-        const emailPayload = {
-          feedback_id: feedbackId,
-          guest_name: formData.guestName || 'QR Code Guest',
-          guest_email: formData.guestEmail || null, // Include guest email if provided
-          room_number: formData.roomNumber,
-          rating,
-          feedback_text: 'Excellent experience via QR code - 5 star rating',
-          issue_category: 'Overall Experience',
-          check_in_date: null,
-          tenant_id: tenant.id,
-          tenant_slug: tenant.slug
-        };
-
-        // Fire and forget - don't wait for email generation
-        supabase.functions.invoke('generate-feedback-emails', {
-          body: emailPayload
-        }).catch(() => {
-          // Silent fail - emails are not critical for guest experience
-        });
-      }
+      // 🚨 DISABLED: Email generation now handled by database triggers
+      // This prevents duplicate emails from being sent
+      // Database triggers automatically handle email routing correctly
     } catch (error) {
       toast({
         title: "Error",
@@ -228,28 +209,9 @@ export default function QuickFeedback() {
         }
       }
 
-      // Generate AI emails asynchronously in the background
-      if (feedbackId) {
-        const emailPayload = {
-          feedback_id: feedbackId,
-          guest_name: formData.guestName || 'Anonymous Guest',
-          guest_email: formData.guestEmail || null, // Include guest email if provided
-          room_number: formData.roomNumber,
-          rating,
-          feedback_text: 'Anonymous low rating feedback - guest chose not to provide details',
-          issue_category: 'General',
-          check_in_date: null,
-          tenant_id: tenant.id,
-          tenant_slug: tenant.slug
-        };
-
-        // Fire and forget - don't wait for email generation
-        supabase.functions.invoke('generate-feedback-emails', {
-          body: emailPayload
-        }).catch(() => {
-          // Silent fail - emails are not critical for guest experience
-        });
-      }
+      // 🚨 DISABLED: Email generation now handled by database triggers
+      // This prevents duplicate emails from being sent
+      // Database triggers automatically handle email routing correctly
     } catch (error) {
       console.error('Anonymous feedback submission error:', error)
 
@@ -359,28 +321,9 @@ export default function QuickFeedback() {
         }
       }
 
-      // Generate AI emails asynchronously in the background
-      if (feedbackId) {
-        const emailPayload = {
-          feedback_id: feedbackId,
-          guest_name: formData.guestName || 'Anonymous Guest',
-          guest_email: formData.guestEmail,
-          room_number: formData.roomNumber,
-          rating,
-          feedback_text: formData.feedbackText,
-          issue_category: formData.issueCategory,
-          check_in_date: null,
-          tenant_id: tenant.id,
-          tenant_slug: tenant.slug
-        };
-
-        // Fire and forget - don't wait for email generation
-        supabase.functions.invoke('generate-feedback-emails', {
-          body: emailPayload
-        }).catch(() => {
-          // Silent fail - emails are not critical for guest experience
-        });
-      }
+      // 🚨 DISABLED: Email generation now handled by database triggers
+      // This prevents duplicate emails from being sent
+      // Database triggers automatically handle email routing correctly
     } catch (error) {
       toast({
         title: "Error submitting feedback",
