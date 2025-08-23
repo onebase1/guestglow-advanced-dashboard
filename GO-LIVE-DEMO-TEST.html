@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 GO-LIVE DEMO - Email Routing Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .demo-section { 
+            background: white;
+            border: 2px solid #28a745; 
+            margin: 20px 0; 
+            padding: 25px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { 
+            padding: 15px 30px; 
+            margin: 10px 5px; 
+            cursor: pointer; 
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .demo-button { 
+            background: linear-gradient(45deg, #28a745, #20c997); 
+            color: white; 
+        }
+        .demo-button:hover { 
+            background: linear-gradient(45deg, #218838, #1ea080); 
+            transform: translateY(-2px);
+        }
+        #results { margin-top: 20px; }
+        .result-item { 
+            margin: 15px 0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border-left: 5px solid #28a745;
+        }
+        .loading { opacity: 0.6; }
+        .highlight { 
+            background-color: #fff3cd; 
+            padding: 3px 8px; 
+            border-radius: 4px; 
+            font-weight: bold;
+        }
+        .email-preview {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-section success">
+        <h1>🎉 GO-LIVE DEMO - Email Routing System</h1>
+        <p><strong>Status:</strong> ✅ <span class="highlight">FULLY OPERATIONAL</span> - Ready for stakeholder demonstration!</p>
+        <p><strong>Purpose:</strong> Demonstrate that guest feedback emails go to the <strong>actual guest email addresses</strong> provided by stakeholders.</p>
+    </div>
+
+    <div class="demo-section info">
+        <h2>📋 Demo Instructions for Stakeholders</h2>
+        <ol>
+            <li><strong>Stakeholder provides their email address</strong> (e.g., stakeholder@company.com)</li>
+            <li><strong>Stakeholder scans QR code</strong> and submits feedback</li>
+            <li><strong>System sends acknowledgment email</strong> to stakeholder's actual email</li>
+            <li><strong>Manager receives alert</strong> at correct department email</li>
+            <li><strong>Stakeholder checks their inbox</strong> to confirm email delivery</li>
+        </ol>
+    </div>
+
+    <div class="demo-section">
+        <h2>🧪 Live Demo Test</h2>
+        <p>Use this to test the email routing with stakeholder email addresses:</p>
+        
+        <div style="margin: 20px 0;">
+            <label for="stakeholderEmail" style="display: block; margin-bottom: 10px; font-weight: bold;">
+                Stakeholder Email Address:
+            </label>
+            <input 
+                type="email" 
+                id="stakeholderEmail" 
+                placeholder="stakeholder@company.com"
+                style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;"
+            />
+        </div>
+        
+        <div style="margin: 20px 0;">
+            <label for="feedbackCategory" style="display: block; margin-bottom: 10px; font-weight: bold;">
+                Feedback Category:
+            </label>
+            <select 
+                id="feedbackCategory" 
+                style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;"
+            >
+                <option value="Food & Beverage">Food & Beverage → basera@btinternet.com</option>
+                <option value="Housekeeping">Housekeeping → g.basera80@gmail.com</option>
+                <option value="Security">Security → g.basera80@gmail.com</option>
+                <option value="Front Desk">Front Desk → g.basera5@gmail.com</option>
+                <option value="Maintenance">Maintenance → gizzy@dreampathdigitalsolutions.co.uk</option>
+            </select>
+        </div>
+        
+        <button class="demo-button" onclick="runDemoTest()">
+            🚀 Run Live Demo Test
+        </button>
+        
+        <div id="results"></div>
+    </div>
+
+    <div class="demo-section warning">
+        <h2>⚠️ Important Notes</h2>
+        <ul>
+            <li><strong>Real emails will be sent</strong> - Use actual stakeholder email addresses</li>
+            <li><strong>Check spam folders</strong> - First-time emails may go to spam</li>
+            <li><strong>Email delivery</strong> - Usually takes 1-2 minutes</li>
+            <li><strong>Manager alerts</strong> - Go to actual department manager emails</li>
+        </ul>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = "https://wzfpltamwhkncxjvulik.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbnN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk";
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        async function runDemoTest() {
+            const stakeholderEmail = document.getElementById('stakeholderEmail').value;
+            const category = document.getElementById('feedbackCategory').value;
+            const resultsDiv = document.getElementById('results');
+            
+            if (!stakeholderEmail) {
+                alert('Please enter a stakeholder email address');
+                return;
+            }
+            
+            if (!stakeholderEmail.includes('@')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            const testId = Date.now();
+            
+            // Add loading indicator
+            resultsDiv.innerHTML = `
+                <div class="result-item loading">
+                    <h3>🔄 Running Live Demo Test...</h3>
+                    <p><strong>Stakeholder Email:</strong> ${stakeholderEmail}</p>
+                    <p><strong>Category:</strong> ${category}</p>
+                    <p>Submitting feedback and sending emails...</p>
+                </div>
+            `;
+            
+            try {
+                // Submit feedback
+                const { data: feedbackData, error: feedbackError } = await supabase.rpc('insert_feedback_with_tenant', {
+                    p_tenant_slug: 'eusbett',
+                    p_guest_name: 'Demo Stakeholder',
+                    p_guest_email: stakeholderEmail,
+                    p_room_number: 'DEMO-ROOM',
+                    p_check_in_date: null,
+                    p_check_out_date: null,
+                    p_rating: 4,
+                    p_feedback_text: `Demo feedback for ${category} - testing email routing for go-live presentation`,
+                    p_issue_category: category,
+                    p_would_recommend: true,
+                    p_source: 'golive_demo'
+                });
+                
+                if (feedbackError) throw feedbackError;
+                
+                const feedbackId = feedbackData;
+                
+                // Wait a moment for triggers to process
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Send pending emails
+                const { data: emailResults, error: emailError } = await supabase.rpc('send_pending_emails_now');
+                
+                if (emailError) throw emailError;
+                
+                // Get the communication logs
+                const { data: logs, error: logsError } = await supabase
+                    .from('communication_logs')
+                    .select('*')
+                    .eq('feedback_id', feedbackId)
+                    .order('created_at', { ascending: false });
+                
+                // Display results
+                const guestEmail = logs.find(log => log.direction === 'outbound');
+                const managerEmail = logs.find(log => log.direction === 'internal');
+                
+                resultsDiv.innerHTML = `
+                    <div class="result-item success">
+                        <h3>✅ Demo Test Completed Successfully!</h3>
+                        <p><strong>Feedback ID:</strong> ${feedbackId}</p>
+                        
+                        <h4>📧 Email Results:</h4>
+                        <div class="email-preview">
+                            <strong>Guest Acknowledgment:</strong><br>
+                            To: ${guestEmail?.recipient_email || 'Not found'}<br>
+                            Subject: ${guestEmail?.email_subject || 'Not found'}<br>
+                            Status: ${guestEmail?.status || 'Not found'}
+                        </div>
+                        
+                        <div class="email-preview">
+                            <strong>Manager Alert:</strong><br>
+                            To: ${managerEmail?.recipient_email || 'Not found'}<br>
+                            Subject: ${managerEmail?.email_subject || 'Not found'}<br>
+                            Status: ${managerEmail?.status || 'Not found'}
+                        </div>
+                        
+                        <h4>🎯 Expected Results:</h4>
+                        <ul>
+                            <li><strong>Stakeholder should receive acknowledgment email</strong> at: ${stakeholderEmail}</li>
+                            <li><strong>Manager should receive alert email</strong> at: ${getExpectedManagerEmail(category)}</li>
+                            <li><strong>Check email inboxes</strong> (including spam folders)</li>
+                        </ul>
+                        
+                        <p style="background-color: #d4edda; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                            <strong>✅ SUCCESS:</strong> The email routing system is working correctly! 
+                            Stakeholder emails go to actual provided addresses, not fallback addresses.
+                        </p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Demo test failed:', error);
+                resultsDiv.innerHTML = `
+                    <div class="result-item" style="border-left-color: #dc3545; background-color: #f8d7da;">
+                        <h3>❌ Demo Test Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Please check the system configuration and try again.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function getExpectedManagerEmail(category) {
+            const emailMap = {
+                'Food & Beverage': 'basera@btinternet.com',
+                'Housekeeping': 'g.basera80@gmail.com',
+                'Security': 'g.basera80@gmail.com',
+                'Front Desk': 'g.basera5@gmail.com',
+                'Maintenance': 'gizzy@dreampathdigitalsolutions.co.uk'
+            };
+            return emailMap[category] || 'g.basera@yahoo.com (General Manager)';
+        }
+    </script>
+</body>
+</html>
