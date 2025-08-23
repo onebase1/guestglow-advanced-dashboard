@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Routing Test - GuestGlow</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 20px 0; padding: 20px; border-radius: 8px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; }
+        .test-button { background-color: #007bff; color: white; border: none; border-radius: 4px; }
+        .test-button:hover { background-color: #0056b3; }
+        #results { margin-top: 20px; }
+        .result-item { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .loading { opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Email Routing Test - Go-Live Preparation</h1>
+    
+    <div class="test-section info">
+        <h2>📋 Pre-Test Checklist</h2>
+        <p><strong>Before testing, ensure you've set these in Supabase Dashboard → Settings → Edge Functions:</strong></p>
+        <ul>
+            <li>FOOD_BEVERAGE_MANAGER_EMAIL=basera@btinternet.com</li>
+            <li>FOOD_BEVERAGE_MANAGER_NAME=Sarah Johnson</li>
+            <li>HOUSEKEEPING_MANAGER_EMAIL=zara80@gmail.com</li>
+            <li>HOUSEKEEPING_MANAGER_NAME=Michael Asante</li>
+            <li>SECURITY_MANAGER_EMAIL=g.basera80@gmail.com</li>
+            <li>FRONT_DESK_MANAGER_EMAIL=g.basera5@gmail.com</li>
+            <li>MAINTENANCE_MANAGER_EMAIL=gizzy@dreampathdigitalsolutions.co.uk</li>
+            <li>GENERAL_MANAGER_EMAIL=g.basera@yahoo.com</li>
+            <li><strong>EMAIL_TEST_MODE=false</strong> (CRITICAL for production)</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Email Routing Tests</h2>
+        <p>Test each department's email routing:</p>
+        
+        <button class="test-button" onclick="testEmailRouting('Food & Beverage', 'test.guest@example.com')">
+            Test Food & Beverage → basera@btinternet.com
+        </button>
+        
+        <button class="test-button" onclick="testEmailRouting('Housekeeping', 'test.guest@example.com')">
+            Test Housekeeping → zara80@gmail.com
+        </button>
+        
+        <button class="test-button" onclick="testEmailRouting('Security', 'test.guest@example.com')">
+            Test Security → g.basera80@gmail.com
+        </button>
+        
+        <button class="test-button" onclick="testEmailRouting('Front Desk', 'test.guest@example.com')">
+            Test Front Desk → g.basera5@gmail.com
+        </button>
+        
+        <button class="test-button" onclick="testEmailRouting('Maintenance', 'test.guest@example.com')">
+            Test Maintenance → gizzy@dreampathdigitalsolutions.co.uk
+        </button>
+    </div>
+
+    <div id="results"></div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = "https://wzfpltamwhkncxjvulik.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbnN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk";
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        async function testEmailRouting(category, guestEmail) {
+            const resultsDiv = document.getElementById('results');
+            const testId = Date.now();
+            
+            // Add loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = `test-${testId}`;
+            loadingDiv.className = 'result-item loading';
+            loadingDiv.innerHTML = `🔄 Testing ${category} email routing...`;
+            resultsDiv.appendChild(loadingDiv);
+            
+            try {
+                // First, submit feedback to get a feedback_id
+                const { data: feedbackData, error: feedbackError } = await supabase.rpc('insert_feedback_with_tenant', {
+                    p_tenant_slug: 'eusbett',
+                    p_guest_name: 'Test Guest',
+                    p_guest_email: guestEmail,
+                    p_room_number: '101',
+                    p_check_in_date: null,
+                    p_check_out_date: null,
+                    p_rating: 3,
+                    p_feedback_text: `Test feedback for ${category} department`,
+                    p_issue_category: category,
+                    p_would_recommend: true,
+                    p_source: 'email_test'
+                });
+                
+                if (feedbackError) throw feedbackError;
+                
+                const feedbackId = feedbackData;
+                
+                // Now test the email generation
+                const emailPayload = {
+                    feedback_id: feedbackId,
+                    guest_name: 'Test Guest',
+                    guest_email: guestEmail,
+                    room_number: '101',
+                    rating: 3,
+                    feedback_text: `Test feedback for ${category} department`,
+                    issue_category: category,
+                    check_in_date: null,
+                    tenant_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', // Eusbett tenant ID
+                    tenant_slug: 'eusbett'
+                };
+                
+                console.log('Sending email payload:', emailPayload);
+                
+                const { data, error } = await supabase.functions.invoke('generate-feedback-emails', {
+                    body: emailPayload
+                });
+                
+                if (error) throw error;
+                
+                // Update result
+                loadingDiv.className = 'result-item success';
+                loadingDiv.innerHTML = `
+                    ✅ <strong>${category} Test Successful</strong><br>
+                    📧 Feedback ID: ${feedbackId}<br>
+                    🎯 Expected Manager Email: ${getExpectedEmail(category)}<br>
+                    👤 Guest Email: ${guestEmail}<br>
+                    📝 Response: ${JSON.stringify(data, null, 2)}
+                `;
+                
+            } catch (error) {
+                console.error('Test failed:', error);
+                loadingDiv.className = 'result-item error';
+                loadingDiv.innerHTML = `
+                    ❌ <strong>${category} Test Failed</strong><br>
+                    🚨 Error: ${error.message}<br>
+                    📝 Details: ${JSON.stringify(error, null, 2)}
+                `;
+            }
+        }
+        
+        function getExpectedEmail(category) {
+            const emailMap = {
+                'Food & Beverage': 'basera@btinternet.com',
+                'Housekeeping': 'zara80@gmail.com',
+                'Security': 'g.basera80@gmail.com',
+                'Front Desk': 'g.basera5@gmail.com',
+                'Maintenance': 'gizzy@dreampathdigitalsolutions.co.uk'
+            };
+            return emailMap[category] || 'g.basera@yahoo.com (General Manager)';
+        }
+        
+        // Auto-run a quick test on page load
+        window.addEventListener('load', () => {
+            console.log('Email routing test page loaded');
+            console.log('Supabase client initialized:', !!supabase);
+        });
+    </script>
+</body>
+</html>

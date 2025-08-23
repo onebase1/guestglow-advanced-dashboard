@@ -2,19 +2,26 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// 🚨 FIXED: Use environment variables instead of hardcoded values
+// 🚨 FIXED: Use environment variables with correct fallback values
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://wzfpltamwhkncxjvulik.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbmN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbnN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk";
 
-// Debug logging for environment variables
-console.log('🔧 Supabase Client Configuration:');
-console.log('URL:', SUPABASE_URL);
-console.log('Key (first 20 chars):', SUPABASE_PUBLISHABLE_KEY.substring(0, 20) + '...');
-console.log('Full Key:', SUPABASE_PUBLISHABLE_KEY);
-console.log('Environment variables available:', {
-  VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-  VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Present' : 'Missing'
-});
+// Debug logging for environment variables (only in development)
+if (import.meta.env.DEV) {
+  console.log('🔧 Supabase Client Configuration:');
+  console.log('URL:', SUPABASE_URL);
+  console.log('Key (first 20 chars):', SUPABASE_PUBLISHABLE_KEY.substring(0, 20) + '...');
+  console.log('Environment variables loaded:', {
+    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL ? 'Present' : 'Using fallback',
+    VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Present' : 'Using fallback'
+  });
+  console.log('Raw environment values:', {
+    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+    VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY ? import.meta.env.VITE_SUPABASE_ANON_KEY.substring(0, 20) + '...' : 'undefined'
+  });
+  console.log('Test variable:', import.meta.env.VITE_TEST_VAR);
+  console.log('All import.meta.env:', import.meta.env);
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
@@ -27,14 +34,16 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
-// Test API key validity
-supabase.auth.getSession().then(({ data, error }) => {
-  if (error) {
-    console.error('🚨 Supabase Auth Error:', error);
-    console.error('This usually means the API key is invalid or expired');
-  } else {
-    console.log('✅ Supabase connection successful');
-  }
-}).catch(err => {
-  console.error('🚨 Supabase Connection Failed:', err);
-});
+// Test API key validity (only in development)
+if (import.meta.env.DEV) {
+  supabase.auth.getSession().then(({ data, error }) => {
+    if (error) {
+      console.error('🚨 Supabase Auth Error:', error);
+      console.error('This usually means the API key is invalid or expired');
+    } else {
+      console.log('✅ Supabase connection successful');
+    }
+  }).catch(err => {
+    console.error('🚨 Supabase Connection Failed:', err);
+  });
+}
