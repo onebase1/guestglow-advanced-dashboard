@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Debug - GuestGlow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Authentication Debug Tool</h1>
+        <p>This tool helps debug authentication issues between local and production environments.</p>
+
+        <div id="status" class="status info">
+            <strong>Status:</strong> Initializing...
+        </div>
+
+        <div class="debug-info">
+            <h3>🔧 Environment Configuration</h3>
+            <div id="env-info">Loading...</div>
+        </div>
+
+        <div class="debug-info">
+            <h3>🔗 Supabase Connection Test</h3>
+            <button onclick="testConnection()">Test Connection</button>
+            <div id="connection-result"></div>
+        </div>
+
+        <div class="debug-info">
+            <h3>👤 Authentication Test</h3>
+            <div>
+                <input type="email" id="test-email" placeholder="g.basera@yahoo.com" value="g.basera@yahoo.com">
+                <input type="password" id="test-password" placeholder="test123" value="test123">
+                <button onclick="testLogin()">Test Login</button>
+            </div>
+            <div id="auth-result"></div>
+        </div>
+
+        <div class="debug-info">
+            <h3>📊 User Data Check</h3>
+            <button onclick="checkUsers()">Check Users in Database</button>
+            <div id="users-result"></div>
+        </div>
+
+        <div class="debug-info">
+            <h3>🔄 Session Status</h3>
+            <button onclick="checkSession()">Check Current Session</button>
+            <div id="session-result"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Environment-based configuration (matches the app)
+        const SUPABASE_URL = "https://wzfpltamwhkncxjvulik.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbnN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzI5NzQsImV4cCI6MjA1MDU0ODk3NH0.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8";
+
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = `<strong>Status:</strong> ${message}`;
+        }
+
+        function displayEnvInfo() {
+            const envInfo = document.getElementById('env-info');
+            envInfo.innerHTML = `
+                <strong>Supabase URL:</strong> ${SUPABASE_URL}<br>
+                <strong>Anon Key (first 20 chars):</strong> ${SUPABASE_KEY.substring(0, 20)}...<br>
+                <strong>Environment:</strong> ${window.location.hostname === 'localhost' ? 'Local Development' : 'Production (Netlify)'}<br>
+                <strong>Current URL:</strong> ${window.location.href}
+            `;
+        }
+
+        async function testConnection() {
+            const resultDiv = document.getElementById('connection-result');
+            resultDiv.innerHTML = '<em>Testing connection...</em>';
+            
+            try {
+                const { data, error } = await supabase.from('tenants').select('count').limit(1);
+                if (error) throw error;
+                
+                resultDiv.innerHTML = `<div class="success">✅ Connection successful! Database accessible.</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Connection failed: ${error.message}</div>`;
+            }
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+            const resultDiv = document.getElementById('auth-result');
+            
+            resultDiv.innerHTML = '<em>Testing login...</em>';
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Login successful!<br>
+                        <strong>User ID:</strong> ${data.user.id}<br>
+                        <strong>Email:</strong> ${data.user.email}<br>
+                        <strong>Created:</strong> ${new Date(data.user.created_at).toLocaleString()}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Login failed: ${error.message}</div>`;
+            }
+        }
+
+        async function checkUsers() {
+            const resultDiv = document.getElementById('users-result');
+            resultDiv.innerHTML = '<em>Checking users...</em>';
+            
+            try {
+                // Note: This requires service role key, so it might fail
+                const { data, error } = await supabase.auth.admin.listUsers();
+                
+                if (error) throw error;
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Found ${data.users.length} users in database<br>
+                        <strong>Users:</strong><br>
+                        ${data.users.map(user => `• ${user.email} (${user.id})`).join('<br>')}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="warning">⚠️ Cannot list users (requires admin access): ${error.message}</div>`;
+            }
+        }
+
+        async function checkSession() {
+            const resultDiv = document.getElementById('session-result');
+            
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) throw error;
+                
+                if (session) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Active session found<br>
+                            <strong>User:</strong> ${session.user.email}<br>
+                            <strong>Expires:</strong> ${new Date(session.expires_at * 1000).toLocaleString()}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="info">ℹ️ No active session</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Session check failed: ${error.message}</div>`;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('Ready for testing', 'success');
+            displayEnvInfo();
+        });
+    </script>
+</body>
+</html>
