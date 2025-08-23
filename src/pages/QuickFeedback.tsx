@@ -191,7 +191,7 @@ export default function QuickFeedback() {
         setInlineReply(null)
         setInlineReplyLoading(true)
         try {
-          const { data } = await supabase.functions.invoke('ai-response-generator', {
+          const { data } = await supabase.functions.invoke('thank-you-generator', {
             body: {
               reviewText: 'Anonymous low rating feedback - guest chose not to provide details',
               rating,
@@ -303,7 +303,7 @@ export default function QuickFeedback() {
         setInlineReply(null)
         setInlineReplyLoading(true)
         try {
-          const { data } = await supabase.functions.invoke('ai-response-generator', {
+          const { data } = await supabase.functions.invoke('thank-you-generator', {
             body: {
               reviewText: formData.feedbackText,
               rating,
