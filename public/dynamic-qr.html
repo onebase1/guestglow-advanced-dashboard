@@ -144,7 +144,7 @@
   </div>
 
   <script>
-    let logoDataUrl = '/eusbett-logo.svg'; // Use SVG logo for better quality
+    let logoDataUrl = '/new_eusbett_logo.jpeg'; // Updated to temporary JPEG logo
     const logoImage = new Image();
 
     function setLogo(src) {
@@ -176,7 +176,7 @@
       reader.onload = () => setLogo(reader.result);
       reader.readAsDataURL(file);
     });
-    document.getElementById('use-default-logo').addEventListener('click', () => setLogo('/eusbett-logo.svg'));
+    document.getElementById('use-default-logo').addEventListener('click', () => setLogo('/new_eusbett_logo.jpeg'));
     document.getElementById('remove-logo').addEventListener('click', () => setLogo(''));
 
 

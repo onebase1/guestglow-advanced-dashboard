@@ -457,7 +457,7 @@ export default function QuickFeedback() {
             <div className="space-y-3">
               <div className="flex justify-center">
                 <img
-                  src={tenant.logo_url || '/lovable-uploads/c2a80098-fa71-470e-9d1e-eec01217f25a.png'}
+                  src={tenant.slug === 'eusbett' ? '/new_eusbett_logo.jpeg' : (tenant.logo_url || '/lovable-uploads/c2a80098-fa71-470e-9d1e-eec01217f25a.png')}
                   alt={`${tenant.name} Logo`}
                   className="h-24 w-auto"
                   style={{ filter: 'contrast(110%) brightness(105%)' }}
