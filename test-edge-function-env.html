@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edge Function Environment Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 20px 0; padding: 20px; border-radius: 8px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background-color: #0056b3; }
+        pre { background-color: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        .loading { opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Edge Function Environment Variable Test</h1>
+    
+    <div class="test-section warning">
+        <h2>⚠️ Current Issue Detected</h2>
+        <p>Based on recent communication logs, emails are still going to fallback addresses:</p>
+        <ul>
+            <li><strong>Food & Beverage feedback</strong> → Manager alert went to <code>g.basera@yahoo.com</code> (should be <code>basera@btinternet.com</code>)</li>
+            <li><strong>Guest acknowledgment</strong> → Went to <code>g.basera5@gmail.com</code> (should be guest's actual email)</li>
+        </ul>
+        <p><strong>This indicates the Edge Functions are not reading the environment variables correctly.</strong></p>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Test Edge Function Environment Access</h2>
+        <p>This will test if the Edge Functions can access the environment variables you set in Supabase Dashboard.</p>
+        
+        <button onclick="testEnvironmentAccess()">Test Environment Variables</button>
+        <button onclick="testEmailGeneration()">Test Email Generation</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Expected Environment Variables</h2>
+        <p>These should be set in <strong>Supabase Dashboard → Settings → Edge Functions</strong>:</p>
+        <pre>FOOD_BEVERAGE_MANAGER_EMAIL=basera@btinternet.com
+FOOD_BEVERAGE_MANAGER_NAME=Sarah Johnson
+HOUSEKEEPING_MANAGER_EMAIL=zara80@gmail.com
+HOUSEKEEPING_MANAGER_NAME=Michael Asante
+SECURITY_MANAGER_EMAIL=g.basera80@gmail.com
+SECURITY_MANAGER_NAME=Robert Kwame
+FRONT_DESK_MANAGER_EMAIL=g.basera5@gmail.com
+FRONT_DESK_MANAGER_NAME=David Mensah
+MAINTENANCE_MANAGER_EMAIL=gizzy@dreampathdigitalsolutions.co.uk
+MAINTENANCE_MANAGER_NAME=Jennifer Boateng
+GENERAL_MANAGER_EMAIL=g.basera@yahoo.com
+GENERAL_MANAGER_NAME=Hotel Manager
+EMAIL_TEST_MODE=false</pre>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = "https://wzfpltamwhkncxjvulik.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbnN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk";
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        async function testEnvironmentAccess() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="loading">🔄 Testing environment variable access...</div>';
+            
+            try {
+                // Test a simple function call that should return environment info
+                const { data, error } = await supabase.functions.invoke('generate-feedback-emails', {
+                    body: {
+                        test_mode: true,
+                        action: 'check_environment'
+                    }
+                });
+                
+                if (error) {
+                    resultsDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Environment Test Failed</h3>
+                            <p><strong>Error:</strong> ${error.message}</p>
+                            <pre>${JSON.stringify(error, null, 2)}</pre>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        <h3>✅ Environment Test Response</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Test Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <pre>${JSON.stringify(error, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testEmailGeneration() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="loading">🔄 Testing email generation with Food & Beverage category...</div>';
+            
+            try {
+                // Submit a test feedback first
+                const { data: feedbackData, error: feedbackError } = await supabase.rpc('insert_feedback_with_tenant', {
+                    p_tenant_slug: 'eusbett',
+                    p_guest_name: 'Test User',
+                    p_guest_email: 'test@example.com',
+                    p_room_number: '999',
+                    p_check_in_date: null,
+                    p_check_out_date: null,
+                    p_rating: 3,
+                    p_feedback_text: 'Test feedback for environment variable routing',
+                    p_issue_category: 'Food & Beverage',
+                    p_would_recommend: true,
+                    p_source: 'environment_test'
+                });
+                
+                if (feedbackError) throw feedbackError;
+                
+                const feedbackId = feedbackData;
+                
+                // Now test email generation
+                const { data, error } = await supabase.functions.invoke('generate-feedback-emails', {
+                    body: {
+                        feedback_id: feedbackId,
+                        guest_name: 'Test User',
+                        guest_email: 'test@example.com',
+                        room_number: '999',
+                        rating: 3,
+                        feedback_text: 'Test feedback for environment variable routing',
+                        issue_category: 'Food & Beverage',
+                        tenant_id: '27843a9a-b53f-482a-87ba-1a3e52f55dc1',
+                        tenant_slug: 'eusbett'
+                    }
+                });
+                
+                if (error) throw error;
+                
+                // Check the communication logs for this feedback
+                const { data: logs, error: logsError } = await supabase
+                    .from('communication_logs')
+                    .select('*')
+                    .eq('feedback_id', feedbackId)
+                    .order('created_at', { ascending: false });
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        <h3>✅ Email Generation Test Complete</h3>
+                        <p><strong>Feedback ID:</strong> ${feedbackId}</p>
+                        <p><strong>Function Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        
+                        <h4>📧 Communication Logs:</h4>
+                        <pre>${JSON.stringify(logs, null, 2)}</pre>
+                        
+                        <h4>🎯 Expected vs Actual:</h4>
+                        <ul>
+                            <li><strong>Expected Manager Email:</strong> basera@btinternet.com (Food & Beverage)</li>
+                            <li><strong>Expected Guest Email:</strong> test@example.com</li>
+                            <li><strong>Actual Results:</strong> Check the logs above</li>
+                        </ul>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Email Generation Test Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <pre>${JSON.stringify(error, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
