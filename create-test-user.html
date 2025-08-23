@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Test User</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>Create Test User for GuestGlow</h1>
+    
+    <div id="create-user-test" class="test-result info">
+        <h3>Create Test User</h3>
+        <input type="email" id="test-email" placeholder="Test Email" value="test@guestglow.com">
+        <input type="password" id="test-password" placeholder="Test Password" value="test123">
+        <button onclick="createTestUser()">Create Test User</button>
+        <div id="create-results">Ready to create test user...</div>
+    </div>
+    
+    <div id="signin-test" class="test-result info">
+        <h3>Test Sign In</h3>
+        <input type="email" id="signin-email" placeholder="Email" value="test@guestglow.com">
+        <input type="password" id="signin-password" placeholder="Password" value="test123">
+        <button onclick="testSignIn()">Test Sign In</button>
+        <div id="signin-results">Ready to test sign in...</div>
+    </div>
+
+    <div id="existing-user-test" class="test-result info">
+        <h3>Test Existing Users</h3>
+        <p>Try different passwords for existing users:</p>
+        <input type="email" id="existing-email" placeholder="Email" value="g.basera@yahoo.com">
+        <input type="password" id="existing-password" placeholder="Password" value="">
+        <button onclick="testExistingUser()">Test Existing User</button>
+        <div id="existing-results">Try common passwords...</div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Configuration from .env file
+        const SUPABASE_URL = "https://wzfpltamwhkncxjvulik.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbmN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk";
+
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Create test user
+        async function createTestUser() {
+            const createDiv = document.getElementById('create-results');
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+            
+            if (!email || !password) {
+                createDiv.innerHTML = 'Please enter email and password';
+                return;
+            }
+            
+            createDiv.innerHTML = 'Creating test user...';
+            
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                createDiv.innerHTML = `Test user created successfully!<br>User: ${data.user.email}<br>Confirmation required: ${!data.user.email_confirmed_at}`;
+                document.getElementById('create-user-test').className = 'test-result success';
+                
+                // Update signin form
+                document.getElementById('signin-email').value = email;
+                document.getElementById('signin-password').value = password;
+                
+            } catch (error) {
+                createDiv.innerHTML = `Failed to create test user: ${error.message}`;
+                document.getElementById('create-user-test').className = 'test-result error';
+                console.error('Create user error:', error);
+            }
+        }
+
+        // Test sign in
+        async function testSignIn() {
+            const signinDiv = document.getElementById('signin-results');
+            const email = document.getElementById('signin-email').value;
+            const password = document.getElementById('signin-password').value;
+            
+            if (!email || !password) {
+                signinDiv.innerHTML = 'Please enter email and password';
+                return;
+            }
+            
+            signinDiv.innerHTML = 'Testing sign in...';
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                signinDiv.innerHTML = `Sign in successful!<br>User: ${data.user.email}<br>Session: ${data.session ? 'Active' : 'None'}`;
+                document.getElementById('signin-test').className = 'test-result success';
+                
+            } catch (error) {
+                signinDiv.innerHTML = `Sign in failed: ${error.message}`;
+                document.getElementById('signin-test').className = 'test-result error';
+                console.error('Sign in error:', error);
+            }
+        }
+
+        // Test existing user with different passwords
+        async function testExistingUser() {
+            const existingDiv = document.getElementById('existing-results');
+            const email = document.getElementById('existing-email').value;
+            const password = document.getElementById('existing-password').value;
+            
+            if (!email || !password) {
+                existingDiv.innerHTML = 'Please enter email and password';
+                return;
+            }
+            
+            existingDiv.innerHTML = 'Testing existing user...';
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                existingDiv.innerHTML = `Sign in successful!<br>User: ${data.user.email}<br>Session: ${data.session ? 'Active' : 'None'}`;
+                document.getElementById('existing-user-test').className = 'test-result success';
+                
+            } catch (error) {
+                existingDiv.innerHTML = `Sign in failed: ${error.message}<br>Try passwords like: password, 123456, admin, guestglow, eusbett`;
+                document.getElementById('existing-user-test').className = 'test-result error';
+                console.error('Existing user sign in error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
