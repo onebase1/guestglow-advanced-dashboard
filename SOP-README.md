@@ -80,6 +80,36 @@ node seed-dataset-samples.js
 - System should trigger manager email alert
 - Check email for severity score and recommended actions
 
+### **Testing SLA System**
+
+#### **Option 1: Browser Console Testing**
+```javascript
+// Copy test-sla-functions.js into browser console, then run:
+testSLA.runAll()  // Complete test suite
+testSLA.monitor() // Test SLA monitoring
+testSLA.satisfaction('feedback-id') // Test satisfaction follow-up
+testSLA.escalation('feedback-id', 1) // Test escalation
+```
+
+#### **Option 2: Manual SLA Testing**
+1. **Create Test Feedback**: Submit low-rating feedback via form
+2. **Wait 35 minutes** OR manually update `created_at` to be older
+3. **Run SLA Monitor**: Should send 30-minute reminder email
+4. **Mark as Resolved**: Should trigger satisfaction follow-up email
+5. **Check Logs**: Verify emails in `communication_logs` table
+
+#### **Option 3: Simulate Overdue Feedback**
+```sql
+-- Create overdue feedback for testing
+UPDATE feedback
+SET created_at = NOW() - INTERVAL '2 hours',
+    acknowledged_at = NULL,
+    resolved_at = NULL
+WHERE id = 'your-test-feedback-id';
+
+-- Then run SLA monitor to trigger escalation
+```
+
 ## Prompt quality for external responses
 - generate-external-review-response builds a platform‑specific prompt:
   - Thanks the guest, addresses specifics, and uses tenant brand voice
@@ -110,10 +140,82 @@ node seed-dataset-samples.js
 - **New Reviews**: Full AI processing with critical alerts
 - **Cost Control**: Only recent reviews trigger expensive AI calls
 
+## 🚨 **SLA TRACKING & ESCALATION SYSTEM**
+
+### **SLA Process Overview**
+The system automatically monitors feedback resolution times and escalates through management hierarchy to ensure timely responses.
+
+### **SLA Timelines by Category**
+```
+Service Quality     → 2 hours (high priority)
+Room Cleanliness    → 2 hours (high priority)
+Staff Behavior      → 1 hour (critical priority)
+Food & Beverage     → 4 hours (normal priority)
+Facilities          → 4 hours (normal priority)
+General Experience  → 4 hours (normal priority)
+```
+
+### **Automated SLA Workflow**
+1. **Initial Response (0 min)** ✅
+   - Guest submits feedback → Immediate acknowledgment email sent
+   - Status: Working
+
+2. **30-Minute Reminder** ✅
+   - If feedback not acknowledged → Reminder email to assigned manager
+   - Function: `sla-monitor` (runs every 15 minutes)
+   - Email: "⏰ 30-Min Reminder: Unacknowledged Feedback"
+
+3. **SLA Escalation** ✅
+   - After configured hours without resolution → Escalates through hierarchy
+   - **Level 1**: Primary Manager (category-specific)
+   - **Level 2**: Backup Manager
+   - **Level 3+**: General Manager (g.basera@yahoo.com)
+   - Function: `escalation-manager`
+   - Email: "🚨 SLA ESCALATION: Unresolved Feedback"
+
+4. **Satisfaction Follow-up** ✅
+   - When feedback marked as "resolved" → Satisfaction survey sent
+   - Function: `send-satisfaction-followup`
+   - Interactive email with satisfaction rating buttons
+   - Email: "How did we do? Your feedback resolution follow-up"
+
+### **SLA Functions Deployed**
+- ✅ `sla-monitor` - Core SLA monitoring and reminders
+- ✅ `send-satisfaction-followup` - Post-resolution satisfaction surveys
+- ✅ `escalation-manager` - Management hierarchy escalation
+
+### **SLA Database Tables**
+- `sla_tracking` - Monitors compliance and resolution times
+- `escalation_logs` - Tracks escalation history and levels
+- `satisfaction_responses` - Stores guest satisfaction survey responses
+
+### **SLA Monitoring & Reporting**
+```sql
+-- Check SLA compliance statistics
+SELECT * FROM get_sla_statistics('tenant_id');
+
+-- View overdue feedback items
+SELECT * FROM get_overdue_feedback('tenant_id');
+
+-- Check recent SLA-related communications
+SELECT * FROM communication_logs
+WHERE email_type IN ('manager_alert', 'satisfaction_followup')
+ORDER BY created_at DESC;
+```
+
+### **SLA Setup Requirements**
+1. **Database Setup**: Run `supabase-sla-tracking-setup.sql`
+2. **Cron Job**: Configure 15-minute SLA monitor schedule
+3. **Manager Configuration**: Set up management hierarchy in `manager_configurations`
+4. **Category Routing**: Configure SLA hours per feedback category
+
 ## 🎯 **System Status: PRODUCTION READY**
 ✅ Human-like AI responses
 ✅ Critical issue detection
 ✅ Manager alert system
+✅ **SLA tracking & escalation** 🆕
+✅ **30-minute reminders** 🆕
+✅ **Satisfaction follow-ups** 🆕
 ✅ Reject & regenerate functionality
 ✅ Auto-response prevention rule
 ✅ Team voice consistency
@@ -125,8 +227,14 @@ node seed-dataset-samples.js
 ## Where the code lives
 - **Main UI**: guestglow-fresh/src/components/ExternalReviewResponseManager.tsx
 - **AI Prompts**: guestglow-fresh/src/config/external-review-prompts.ts
-- **Edge Functions**: generate-external-review-response-improved, external-review-critical-alert
-- **Test Scripts**: seed-dataset-samples.js, debug-reject-regenerate.js
+- **Edge Functions**:
+  - generate-external-review-response-improved, external-review-critical-alert
+  - sla-monitor, send-satisfaction-followup, escalation-manager
+- **SLA Database Setup**: supabase-sla-tracking-setup.sql
+- **Test Scripts**:
+  - seed-dataset-samples.js, debug-reject-regenerate.js
+  - test-sla-functions.js (SLA system testing)
+- **SLA Documentation**: sla-system-setup-instructions.md
 - **Legacy**: ExternalReviewsTab.tsx (old system)
 
 ## Rollback plan

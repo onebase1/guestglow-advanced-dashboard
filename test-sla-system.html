@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLA System Test - GuestGlow</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        .test-section h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .success {
+            background: #10b981;
+        }
+        .warning {
+            background: #f59e0b;
+        }
+        .danger {
+            background: #ef4444;
+        }
+        .results {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 8px 16px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 SLA System Test Dashboard</h1>
+        <p>Test the complete SLA tracking and escalation system for GuestGlow</p>
+
+        <!-- Test 1: SLA Monitor Function -->
+        <div class="test-section">
+            <h3>🔍 Test 1: SLA Monitor Function</h3>
+            <p>Tests the core SLA monitoring function that checks for overdue feedback and sends reminders/escalations.</p>
+            <button onclick="testSLAMonitor()">Run SLA Monitor</button>
+            <button onclick="testSLAMonitorWithData()" class="warning">Test with Mock Data</button>
+            <div id="sla-monitor-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Test 2: Satisfaction Follow-up -->
+        <div class="test-section">
+            <h3>📧 Test 2: Satisfaction Follow-up</h3>
+            <p>Tests the satisfaction survey email that should be sent when feedback is marked as resolved.</p>
+            <input type="text" id="feedback-id-input" placeholder="Enter feedback ID" style="padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <button onclick="testSatisfactionFollowup()">Send Satisfaction Survey</button>
+            <button onclick="testSatisfactionFollowupMock()" class="success">Test with Mock Feedback</button>
+            <div id="satisfaction-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Test 3: Escalation Manager -->
+        <div class="test-section">
+            <h3>🔄 Test 3: Escalation Manager</h3>
+            <p>Tests the escalation system that routes feedback through management hierarchy.</p>
+            <input type="text" id="escalation-feedback-id" placeholder="Feedback ID" style="padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <select id="escalation-level" style="padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="1">Level 1 - Primary Manager</option>
+                <option value="2">Level 2 - Backup Manager</option>
+                <option value="3">Level 3 - General Manager</option>
+            </select>
+            <button onclick="testEscalation()">Escalate Feedback</button>
+            <div id="escalation-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Test 4: Database Setup Verification -->
+        <div class="test-section">
+            <h3>🗄️ Test 4: Database Setup Verification</h3>
+            <p>Verifies that all SLA tracking tables and functions are properly set up.</p>
+            <button onclick="verifyDatabaseSetup()">Verify Database Setup</button>
+            <button onclick="checkSLAStatistics()" class="success">Check SLA Statistics</button>
+            <div id="database-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Test 5: End-to-End Workflow -->
+        <div class="test-section">
+            <h3>🔄 Test 5: End-to-End SLA Workflow</h3>
+            <p>Creates a test feedback, monitors SLA compliance, and tests the complete escalation chain.</p>
+            <button onclick="runEndToEndTest()" class="danger">Run Complete E2E Test</button>
+            <button onclick="simulateOverdueFeedback()" class="warning">Simulate Overdue Feedback</button>
+            <div id="e2e-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- System Status -->
+        <div class="test-section">
+            <h3>📊 System Status</h3>
+            <div id="system-status">
+                <div class="status info">🔄 Ready to test SLA system...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase client
+        const supabaseUrl = 'https://wzfpltamwhkncxjvulik.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbnN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MDQ5NzEsImV4cCI6MjA3MTE4MDk3MX0.Ey_FJhJGJhEKJhEKJhEKJhEKJhEKJhEKJhEKJhEKJhE';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('system-status');
+            const statusClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔄';
+            statusDiv.innerHTML = `<div class="status ${statusClass}">${icon} ${message}</div>`;
+        }
+
+        function showResults(elementId, data, success = true) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent = JSON.stringify(data, null, 2);
+            element.style.background = success ? '#f0fdf4' : '#fef2f2';
+            element.style.borderColor = success ? '#10b981' : '#ef4444';
+        }
+
+        // Test 1: SLA Monitor Function
+        async function testSLAMonitor() {
+            updateStatus('Testing SLA Monitor function...');
+            try {
+                const { data, error } = await supabase.functions.invoke('sla-monitor', {
+                    body: {}
+                });
+
+                if (error) throw error;
+
+                showResults('sla-monitor-results', data, true);
+                updateStatus('SLA Monitor test completed successfully!', 'success');
+            } catch (error) {
+                showResults('sla-monitor-results', { error: error.message }, false);
+                updateStatus('SLA Monitor test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 2: Satisfaction Follow-up
+        async function testSatisfactionFollowup() {
+            const feedbackId = document.getElementById('feedback-id-input').value;
+            if (!feedbackId) {
+                alert('Please enter a feedback ID');
+                return;
+            }
+
+            updateStatus('Testing Satisfaction Follow-up...');
+            try {
+                const { data, error } = await supabase.functions.invoke('send-satisfaction-followup', {
+                    body: { feedback_id: feedbackId }
+                });
+
+                if (error) throw error;
+
+                showResults('satisfaction-results', data, true);
+                updateStatus('Satisfaction follow-up test completed!', 'success');
+            } catch (error) {
+                showResults('satisfaction-results', { error: error.message }, false);
+                updateStatus('Satisfaction follow-up test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 3: Escalation Manager
+        async function testEscalation() {
+            const feedbackId = document.getElementById('escalation-feedback-id').value;
+            const escalationLevel = parseInt(document.getElementById('escalation-level').value);
+
+            if (!feedbackId) {
+                alert('Please enter a feedback ID');
+                return;
+            }
+
+            updateStatus('Testing Escalation Manager...');
+            try {
+                const { data, error } = await supabase.functions.invoke('escalation-manager', {
+                    body: {
+                        feedback_id: feedbackId,
+                        escalation_level: escalationLevel,
+                        reason: 'SLA system test escalation'
+                    }
+                });
+
+                if (error) throw error;
+
+                showResults('escalation-results', data, true);
+                updateStatus('Escalation test completed!', 'success');
+            } catch (error) {
+                showResults('escalation-results', { error: error.message }, false);
+                updateStatus('Escalation test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 4: Database Setup Verification
+        async function verifyDatabaseSetup() {
+            updateStatus('Verifying database setup...');
+            try {
+                // Check if required tables exist
+                const tables = ['escalation_logs', 'sla_tracking', 'satisfaction_responses'];
+                const results = {};
+
+                for (const table of tables) {
+                    try {
+                        const { data, error } = await supabase.from(table).select('*').limit(1);
+                        results[table] = error ? `Error: ${error.message}` : 'Table exists and accessible';
+                    } catch (e) {
+                        results[table] = `Error: ${e.message}`;
+                    }
+                }
+
+                showResults('database-results', results, true);
+                updateStatus('Database verification completed!', 'success');
+            } catch (error) {
+                showResults('database-results', { error: error.message }, false);
+                updateStatus('Database verification failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 5: End-to-End Workflow
+        async function runEndToEndTest() {
+            updateStatus('Running end-to-end SLA workflow test...');
+            const results = [];
+
+            try {
+                // Step 1: Create test feedback
+                results.push('Step 1: Creating test feedback...');
+                const { data: feedbackData, error: feedbackError } = await supabase.rpc('insert_feedback_with_tenant', {
+                    p_tenant_slug: 'eusbett',
+                    p_guest_name: 'SLA Test User',
+                    p_guest_email: 'g.basera5@gmail.com',
+                    p_room_number: '999',
+                    p_rating: 2,
+                    p_feedback_text: 'This is a test feedback for SLA system verification',
+                    p_issue_category: 'Service Quality',
+                    p_would_recommend: false,
+                    p_source: 'sla_test'
+                });
+
+                if (feedbackError) throw feedbackError;
+                results.push(`✅ Test feedback created: ${feedbackData}`);
+
+                // Step 2: Test SLA Monitor
+                results.push('Step 2: Running SLA Monitor...');
+                const { data: slaData, error: slaError } = await supabase.functions.invoke('sla-monitor', {
+                    body: {}
+                });
+
+                if (slaError) throw slaError;
+                results.push(`✅ SLA Monitor completed: ${slaData.actions_taken} actions taken`);
+
+                // Step 3: Test Satisfaction Follow-up
+                results.push('Step 3: Testing satisfaction follow-up...');
+                const { data: satisfactionData, error: satisfactionError } = await supabase.functions.invoke('send-satisfaction-followup', {
+                    body: { feedback_id: feedbackData }
+                });
+
+                if (satisfactionError) throw satisfactionError;
+                results.push(`✅ Satisfaction follow-up: ${satisfactionData.message}`);
+
+                showResults('e2e-results', results.join('\n'), true);
+                updateStatus('End-to-end test completed successfully!', 'success');
+
+            } catch (error) {
+                results.push(`❌ Error: ${error.message}`);
+                showResults('e2e-results', results.join('\n'), false);
+                updateStatus('End-to-end test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('SLA System Test Dashboard loaded. Ready to test!');
+        });
+    </script>
+</body>
+</html>
