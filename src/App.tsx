@@ -10,6 +10,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import TenantAuth from "./pages/TenantAuth";
+import Unauthorized from "./pages/Unauthorized";
 import QuickFeedback from "./pages/QuickFeedback";
 import Dashboard from "./pages/Dashboard";
 import QRStudio from "./pages/QRStudio";
@@ -19,6 +21,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Security from "./pages/Security";
 import NotFound from "./pages/NotFound";
+import { TenantAuthMiddleware } from "./middleware/TenantAuthMiddleware";
 
 const queryClient = new QueryClient();
 
@@ -33,31 +36,39 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
 
         {/* Legacy routes for backward compatibility */}
         <Route path="/quick-feedback" element={<QuickFeedback />} />
 
-        {/* Tenant-specific routes */}
-        <Route path="/:tenantSlug/quick-feedback" element={<QuickFeedback />} />
+        {/* 🔐 TENANT-SCOPED AUTHENTICATION */}
+        <Route path="/:tenantSlug/auth" element={<TenantAuth />} />
+
+        {/* 🛡️ TENANT-SPECIFIC PROTECTED ROUTES */}
+        <Route path="/:tenantSlug/quick-feedback" element={
+          <TenantAuthMiddleware requireAuth={false}>
+            <QuickFeedback />
+          </TenantAuthMiddleware>
+        } />
         <Route path="/:tenantSlug/dashboard" element={
-          <ProtectedRoute>
+          <TenantAuthMiddleware requireAuth={true}>
             <Dashboard />
-          </ProtectedRoute>
+          </TenantAuthMiddleware>
         } />
         <Route path="/:tenantSlug/qr-studio" element={
-          <ProtectedRoute>
+          <TenantAuthMiddleware requireAuth={true}>
             <QRStudio />
-          </ProtectedRoute>
+          </TenantAuthMiddleware>
         } />
         <Route path="/:tenantSlug/marketing" element={
-          <ProtectedRoute>
+          <TenantAuthMiddleware requireAuth={true}>
             <Marketing />
-          </ProtectedRoute>
+          </TenantAuthMiddleware>
         } />
         <Route path="/:tenantSlug/go-live-config" element={
-          <ProtectedRoute>
+          <TenantAuthMiddleware requireAuth={true}>
             <GoLiveConfiguration />
-          </ProtectedRoute>
+          </TenantAuthMiddleware>
         } />
 
         {/* Legacy protected routes for backward compatibility */}

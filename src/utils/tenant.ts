@@ -182,7 +182,7 @@ export const getQRCodeUrl = (tenant: Tenant, area?: string): string => {
   }
 }
 
-// Validate tenant access for authenticated users
+// 🛡️ ENTERPRISE-GRADE TENANT ACCESS VALIDATION
 export const validateTenantAccess = async (tenantId: string): Promise<boolean> => {
   try {
     // Check if user is authenticated first
@@ -194,23 +194,67 @@ export const validateTenantAccess = async (tenantId: string): Promise<boolean> =
     try {
       const { data: userRoles, error } = await supabase
         .from('user_roles')
-        .select('tenant_id')
+        .select('tenant_id, role, is_active')
         .eq('user_id', user.id)
         .eq('tenant_id', tenantId)
+        .eq('is_active', true)
 
       if (error) {
-        console.warn('user_roles table not available, allowing access for development')
-        return true // Allow access for development when database is not fully set up
+        // 🚨 PRODUCTION SECURITY: No development overrides
+        console.error('Failed to validate tenant access:', error)
+        return false
       }
 
+      // User must have at least one active role for this tenant
       return userRoles && userRoles.length > 0
     } catch (dbError) {
-      console.warn('user_roles table not available, allowing access for development')
-      return true // Allow access for development when database is not fully set up
+      // 🚨 PRODUCTION SECURITY: No development overrides
+      console.error('Database error during tenant validation:', dbError)
+      return false
     }
   } catch (error) {
     console.error('Error validating tenant access:', error)
     return false
+  }
+}
+
+// 🔒 ENHANCED TENANT ACCESS VALIDATION WITH ROLE CHECKING
+export const validateTenantAccessWithRoles = async (
+  tenantId: string,
+  requiredRoles: string[] = []
+): Promise<{ hasAccess: boolean; userRoles: string[] }> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { hasAccess: false, userRoles: [] }
+    }
+
+    const { data: userRoles, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+
+    if (error) {
+      console.error('Failed to validate tenant access with roles:', error)
+      return { hasAccess: false, userRoles: [] }
+    }
+
+    const roles = userRoles?.map(r => r.role) || []
+    const hasAccess = roles.length > 0
+
+    // Check if user has required roles (if specified)
+    const hasRequiredRoles = requiredRoles.length === 0 ||
+      requiredRoles.some(role => roles.includes(role))
+
+    return {
+      hasAccess: hasAccess && hasRequiredRoles,
+      userRoles: roles
+    }
+  } catch (error) {
+    console.error('Error validating tenant access with roles:', error)
+    return { hasAccess: false, userRoles: [] }
   }
 }
 

@@ -6,12 +6,21 @@ interface ProtectedRouteProps {
   children: React.ReactNode
 }
 
+/**
+ * 🔄 LEGACY PROTECTED ROUTE COMPONENT
+ *
+ * This component is maintained for backward compatibility with legacy routes.
+ * New tenant-scoped routes should use TenantAuthMiddleware instead.
+ *
+ * @deprecated Use TenantAuthMiddleware for new tenant-scoped routes
+ */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
     if (!loading && !user) {
+      // For legacy routes, redirect to global auth
       navigate('/auth')
     }
   }, [user, loading, navigate])

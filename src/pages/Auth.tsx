@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,7 @@ import { useTenantBranding } from "@/hooks/useTenantBranding"
 const SIGNUPS_ENABLED = true
 
 export default function Auth() {
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -22,6 +23,16 @@ export default function Auth() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const branding = useTenantBranding()
+
+  // 🔄 REDIRECT TO TENANT-SCOPED AUTH IF TENANT SPECIFIED
+  useEffect(() => {
+    const tenant = searchParams.get('tenant')
+    if (tenant) {
+      const returnUrl = searchParams.get('returnUrl')
+      const redirectUrl = `/${tenant}/auth${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
+      navigate(redirectUrl, { replace: true })
+    }
+  }, [searchParams, navigate])
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()

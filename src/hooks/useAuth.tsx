@@ -47,8 +47,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`
-    
+    // 🔒 TENANT-AWARE REDIRECT URL
+    const currentPath = window.location.pathname
+    const tenantMatch = currentPath.match(/^\/([^\/]+)\//)
+    const tenantSlug = tenantMatch ? tenantMatch[1] : null
+
+    const redirectUrl = tenantSlug
+      ? `${window.location.origin}/${tenantSlug}/dashboard`
+      : `${window.location.origin}/`
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
