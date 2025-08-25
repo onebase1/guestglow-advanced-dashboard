@@ -39,7 +39,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
 
   const links = [
     {
-      label: "Internal Reviews",
+      label: "Internal Workflow",
       href: tenantSlug ? `/${tenantSlug}/dashboard` : "/dashboard",
       icon: (
         <MessageSquare className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
@@ -47,7 +47,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
       id: "internal"
     },
     {
-      label: "External Reviews",
+      label: "Review Manager",
       href: tenantSlug ? `/${tenantSlug}/dashboard` : "/dashboard",
       icon: (
         <Globe className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />

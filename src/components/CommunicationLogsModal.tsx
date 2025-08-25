@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { Mail, User, AlertTriangle, Copy, CheckCircle, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { processEmailContent } from '@/utils/emailContentProcessor';
 
 interface CommunicationLog {
   id: string;
@@ -133,19 +134,24 @@ export function CommunicationLogsModal({ feedbackId, guestName, isOpen, onClose 
           <div className="w-full border rounded-md p-4">
             <div className="space-y-4 text-sm leading-relaxed">
               {log.email_html ? (
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert [&_p]:text-foreground [&_p]:leading-relaxed [&_p]:mb-3"
-                  dangerouslySetInnerHTML={{ 
-                    __html: log.email_html
-                      .replace(/<html[^>]*>.*?<body[^>]*>/gis, '')
-                      .replace(/<\/body>.*?<\/html>/gis, '')
-                      .replace(/<head>.*?<\/head>/gis, '')
-                      .replace(/<!DOCTYPE[^>]*>/gi, '')
-                      .replace(/<title>.*?<\/title>/gis, '')
-                      .replace(/<meta[^>]*>/gi, '')
-                      .replace(/<br\s*\/?>/gi, '<br>')
-                  }}
-                />
+                (() => {
+                  // Process email content with professional processor
+                  const processed = processEmailContent(log.email_html);
+
+                  return (
+                    <div>
+                      {processed.warnings.length > 0 && (
+                        <div className="mb-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                          ⚠️ Content processed: {processed.warnings.join(', ')}
+                        </div>
+                      )}
+                      <div
+                        className="prose prose-sm max-w-none dark:prose-invert [&_p]:text-foreground [&_p]:leading-relaxed [&_p]:mb-3"
+                        dangerouslySetInnerHTML={{ __html: processed.html }}
+                      />
+                    </div>
+                  );
+                })()
               ) : (
                 <p className="text-muted-foreground italic">No content available</p>
               )}

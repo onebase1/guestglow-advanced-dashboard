@@ -1,5 +1,7 @@
 import { RecentFeedbackTab } from "./RecentFeedbackTab"
+import { InternalReviewKanban } from "./InternalReviewKanban"
 import { ExternalReviewsTab } from "./ExternalReviewsTab"
+import { UnifiedReviewDashboard } from "./UnifiedReviewDashboard"
 import { WorkflowManager } from "./WorkflowManager"
 import { AnalyticsCharts } from "./AnalyticsCharts"
 import { QRCodeGenerator } from "./QRCodeGenerator"
@@ -19,8 +21,18 @@ export function DashboardContent({ activeTab, recentFeedback, externalReviews, o
   const renderContent = () => {
     switch (activeTab) {
       case "internal":
+        return <InternalReviewKanban reviews={recentFeedback} onStatusUpdate={onStatusUpdate} />
+      case "internal-legacy":
         return <RecentFeedbackTab recentFeedback={recentFeedback} onStatusUpdate={onStatusUpdate} />
       case "external":
+        return <UnifiedReviewDashboard
+          reviews={externalReviews}
+          onResponseAction={(reviewId, action) => {
+            // Handle response actions - integrate with existing response manager
+            console.log('Response action:', reviewId, action);
+          }}
+        />
+      case "external-legacy":
         return <ExternalReviewsTab externalReviews={externalReviews} />
       case "external-responses":
         return <ExternalReviewResponseManager />

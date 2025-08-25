@@ -10,17 +10,18 @@ import { StarRating } from "@/components/ui/star-rating"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
-import { Star, Heart, MessageSquare } from "lucide-react"
+import { Star, MessageSquare } from "lucide-react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { getTenantSlugFromParams, getTenantBySlug, submitFeedbackWithTenant, applyTenantBranding, type Tenant, DEFAULT_TENANT } from "@/utils/tenant"
 import { logFeedbackSubmission, logQRCodeScan, logNetworkError } from "@/utils/logging"
 import { canSubmitFeedback, getOfflineStatusMessage } from "@/utils/serviceWorker"
+import { processEmailContent, wrapEmailHtml } from "@/utils/emailContentProcessor"
 // Remove unused imports - using inline validation instead
 
 export default function QuickFeedback() {
   const [searchParams] = useSearchParams()
   const params = useParams<{ tenantSlug?: string }>()
-  const roomNumber = searchParams.get('room') || ''
+  const roomNumber = searchParams.get('room') || '' // Keep for logging purposes only
   const areaParam = searchParams.get('area') || ''
   const categoryParam = (searchParams.get('category') || '').toLowerCase()
   const [step, setStep] = useState(1)
@@ -28,7 +29,7 @@ export default function QuickFeedback() {
   const [wantToProvideDetails, setWantToProvideDetails] = useState(false)
   const [formData, setFormData] = useState({
     guestName: "",
-    roomNumber: roomNumber,
+    roomNumber: "", // Never auto-populate from QR code - prevents confusion when QR location ≠ complaint subject
     guestEmail: "",
     feedbackText: "",
     issueCategory: "",
@@ -112,7 +113,7 @@ export default function QuickFeedback() {
         source: 'qr_code'
       })
 
-      setStep(5) // Thank you step
+      setStep(6) // Go to external review permission step
 
       // 🚨 DISABLED: Email generation now handled by database triggers
       // This prevents duplicate emails from being sent
@@ -124,13 +125,6 @@ export default function QuickFeedback() {
         variant: "destructive"
       })
     } finally {
-      // After successful 5-star submission, route to TripAdvisor (placeholder)
-      try {
-        if (rating === 5) {
-          const tripUrl = 'https://www.tripadvisor.com/UserReviewEdit-g2400444-d2399149-Eusbett_Hotel-Sunyani_Brong_Ahafo_Region.html';
-          setTimeout(() => { window.open(tripUrl, '_blank') }, 800)
-        }
-      } catch {}
       setLoading(false)
     }
   }
@@ -392,17 +386,63 @@ export default function QuickFeedback() {
     }
   }
 
+  const handleExternalReviewYes = async () => {
+    setLoading(true)
+    try {
+      // Redirect to TripAdvisor
+      const tripUrl = 'https://www.tripadvisor.com/UserReviewEdit-g2400444-d2399149-Eusbett_Hotel-Sunyani_Brong_Ahafo_Region.html';
+      window.open(tripUrl, '_blank')
+
+      // Show thank you message
+      setStep(5) // Go to thank you step
+
+      toast({
+        title: "Thank you!",
+        description: "We appreciate you sharing your experience!"
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleExternalReviewNo = async () => {
+    setLoading(true)
+    try {
+      // Just show thank you message
+      setStep(5) // Go to thank you step
+
+      toast({
+        title: "Thank you!",
+        description: "We appreciate your excellent rating!"
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-card via-muted/20 to-primary/5 p-4">
       <div className="mx-auto max-w-md">
-        <Card className="bg-card border-2 border-border shadow-2xl backdrop-blur-sm">
+        <Card className="bg-card border-2 border-gray-300 shadow-2xl backdrop-blur-sm">
           <CardHeader className="text-center pb-4 space-y-4">
             <div className="space-y-3">
               <div className="flex justify-center">
                 <img
                   src={tenant.slug === 'eusbett' ? '/new_eusbett_logo.jpeg' : (tenant.logo_url || '/lovable-uploads/c2a80098-fa71-470e-9d1e-eec01217f25a.png')}
                   alt={`${tenant.name} Logo`}
-                  className="h-24 w-auto"
+                  className="h-48 w-auto"
                   style={{ filter: 'contrast(110%) brightness(105%)' }}
                 />
               </div>
@@ -412,6 +452,7 @@ export default function QuickFeedback() {
                 <div className={`w-3 h-3 rounded-full transition-colors ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
                 <div className={`w-3 h-3 rounded-full transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
                 <div className={`w-3 h-3 rounded-full transition-colors ${step >= 5 ? 'bg-success' : 'bg-muted'}`} />
+                {rating === 5 && <div className={`w-3 h-3 rounded-full transition-colors ${step >= 6 ? 'bg-primary' : 'bg-muted'}`} />}
               </div>
 
               {step === 1 && (
@@ -428,6 +469,15 @@ export default function QuickFeedback() {
                   <CardTitle className="text-xl text-foreground">Help Us Improve</CardTitle>
                   <CardDescription className="text-muted-foreground">
                     Tell us what happened so we can make it right
+                  </CardDescription>
+                </>
+              )}
+
+              {step === 6 && (
+                <>
+                  <CardTitle className="text-xl text-foreground">Share Your Experience</CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    Help other travelers with your review
                   </CardDescription>
                 </>
               )}
@@ -548,9 +598,6 @@ export default function QuickFeedback() {
 
             {step === 5 && (
               <div className="text-center space-y-6 py-8">
-                <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto">
-                  <Heart className="w-8 h-8 text-success" />
-                </div>
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold text-success">Thank You!</h3>
                   <p className="text-muted-foreground">
@@ -590,7 +637,10 @@ export default function QuickFeedback() {
                           disabled={!inlineReply || inlineReplyLoading || !emailCapture}
                           onClick={async () => {
                             try {
-                              const html = `<div style=\"font-family:sans-serif\">${(inlineReply || '').replace(/\n/g, '<br/>')}</div>`
+                              // Process AI response with professional email processor
+                              const processed = processEmailContent(inlineReply || '')
+                              const html = wrapEmailHtml(processed.html, tenant.name || 'Eusbett Hotel')
+
                               await supabase.functions.invoke('send-tenant-emails', {
                                 body: {
                                   feedback_id: undefined,
@@ -637,7 +687,53 @@ export default function QuickFeedback() {
                 </p>
               </div>
             )}
+
+            {step === 6 && (
+              <div className="text-center space-y-6 py-8">
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-primary">Help Other Travelers! 🌟</h3>
+                  <p className="text-muted-foreground">
+                    Since you loved your stay, help other families discover Eusbett Hotel too!
+                  </p>
+                  <p className="text-sm text-muted-foreground/80">
+                    Join 200+ happy guests on TripAdvisor • Quick 30-second review
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleExternalReviewYes}
+                    size="lg"
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    disabled={loading}
+                  >
+                    🚀 Share My Experience
+                  </Button>
+                  <Button
+                    onClick={handleExternalReviewNo}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-muted-foreground"
+                    disabled={loading}
+                  >
+                    Maybe later
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
+
+          {/* Powered by GuestGlow */}
+          <div className="px-6 pb-4">
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground/70">
+                Powered by{' '}
+                <span className="font-medium text-muted-foreground">
+                  GuestGlow
+                </span>
+              </p>
+            </div>
+          </div>
         </Card>
       </div>
     </div>
