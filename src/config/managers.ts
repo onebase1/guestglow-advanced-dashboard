@@ -1,25 +1,55 @@
-// Manager Configuration from Environment Variables
-// This allows easy updates without code changes - just update .env file!
+/**
+ * 🔄 MANAGER CONFIGURATION - HYBRID APPROACH
+ *
+ * MIGRATION STRATEGY:
+ * - NEW: Database-driven tenant-specific configurations (scalable)
+ * - LEGACY: Environment variable fallback (backward compatibility)
+ * - SAFE: Graceful degradation if database unavailable
+ *
+ * 🎯 FOR NEW TENANTS: Use database configuration (no environment variables needed)
+ * 🔄 FOR EXISTING: Maintains environment variable support during transition
+ */
 
-export interface ManagerConfig {
-  name: string
-  email: string
-  title: string
-  phone: string
-  department: string
+import {
+  getTenantManagerConfigurations,
+  getTenantManagerByCategory,
+  getAllTenantManagers,
+  type ManagerConfig as TenantManagerConfig,
+  type ManagerConfigurations as TenantManagerConfigurations
+} from '@/services/tenantConfigService'
+
+// Re-export types for backward compatibility
+export type ManagerConfig = TenantManagerConfig
+export type ManagerConfigurations = TenantManagerConfigurations
+
+/**
+ * 🎯 PRIMARY: Get manager configurations (Database-first with fallback)
+ * This function now uses database configuration by default
+ */
+export const getManagerConfigurations = async (tenantId?: string): Promise<ManagerConfigurations> => {
+  try {
+    // Try database-driven configuration first
+    return await getTenantManagerConfigurations(tenantId)
+  } catch (error) {
+    console.warn('Database configuration failed, using environment variables:', error)
+    // Fallback to environment variables
+    return getEnvironmentManagerConfigurations()
+  }
 }
 
-export interface ManagerConfigurations {
-  foodBeverage: ManagerConfig
-  housekeeping: ManagerConfig
-  security: ManagerConfig
-  frontDesk: ManagerConfig
-  maintenance: ManagerConfig
-  general: ManagerConfig
+/**
+ * 🎯 SYNCHRONOUS VERSION: For backward compatibility
+ * Uses environment variables only (legacy support)
+ */
+export const getManagerConfigurationsSync = (): ManagerConfigurations => {
+  return getEnvironmentManagerConfigurations()
 }
 
-// Get manager configurations from environment variables
-export const getManagerConfigurations = (): ManagerConfigurations => {
+/**
+ * 🔄 ENVIRONMENT VARIABLE FALLBACK
+ * Maintains existing behavior for backward compatibility
+ */
+const getEnvironmentManagerConfigurations = (): ManagerConfigurations => {
   return {
     foodBeverage: {
       name: import.meta.env.VITE_FOOD_BEVERAGE_MANAGER_NAME || 'Food & Beverage Manager',
@@ -66,45 +96,78 @@ export const getManagerConfigurations = (): ManagerConfigurations => {
   }
 }
 
-// Get manager by feedback category
-export const getManagerByCategory = (category: string): ManagerConfig => {
-  const managers = getManagerConfigurations()
-  
+/**
+ * 🎯 PRIMARY: Get manager by feedback category (Database-first)
+ */
+export const getManagerByCategory = async (category: string, tenantId?: string): Promise<ManagerConfig> => {
+  try {
+    // Use database-driven configuration
+    return await getTenantManagerByCategory(category, tenantId)
+  } catch (error) {
+    console.warn('Database category lookup failed, using environment variables:', error)
+    // Fallback to environment variables
+    const managers = getEnvironmentManagerConfigurations()
+    return getManagerByCategorySync(category, managers)
+  }
+}
+
+/**
+ * 🔄 SYNCHRONOUS VERSION: For backward compatibility
+ */
+export const getManagerByCategorySync = (category: string, managers?: ManagerConfigurations): ManagerConfig => {
+  const managerConfigs = managers || getEnvironmentManagerConfigurations()
+
   switch (category.toLowerCase()) {
     case 'food & beverage':
     case 'food':
     case 'restaurant':
     case 'dining':
-      return managers.foodBeverage
-      
+      return managerConfigs.foodBeverage
+
     case 'housekeeping':
     case 'room':
     case 'cleaning':
-      return managers.housekeeping
-      
+      return managerConfigs.housekeeping
+
     case 'security':
     case 'safety':
-      return managers.security
-      
+      return managerConfigs.security
+
     case 'front desk':
     case 'reception':
     case 'check-in':
     case 'check-out':
-      return managers.frontDesk
-      
+      return managerConfigs.frontDesk
+
     case 'maintenance':
     case 'facilities':
     case 'repair':
-      return managers.maintenance
-      
+      return managerConfigs.maintenance
+
     default:
-      return managers.general
+      return managerConfigs.general
   }
 }
 
-// Get all managers as array for display
-export const getAllManagers = (): ManagerConfig[] => {
-  const managers = getManagerConfigurations()
+/**
+ * 🎯 PRIMARY: Get all managers as array (Database-first)
+ */
+export const getAllManagers = async (tenantId?: string): Promise<ManagerConfig[]> => {
+  try {
+    // Use database-driven configuration
+    return await getAllTenantManagers(tenantId)
+  } catch (error) {
+    console.warn('Database managers lookup failed, using environment variables:', error)
+    // Fallback to environment variables
+    return getAllManagersSync()
+  }
+}
+
+/**
+ * 🔄 SYNCHRONOUS VERSION: For backward compatibility
+ */
+export const getAllManagersSync = (): ManagerConfig[] => {
+  const managers = getEnvironmentManagerConfigurations()
   return [
     managers.foodBeverage,
     managers.housekeeping,
@@ -115,18 +178,37 @@ export const getAllManagers = (): ManagerConfig[] => {
   ]
 }
 
-// Check if manager emails are still placeholders
+/**
+ * 🔍 CHECK PLACEHOLDER EMAILS (Environment variables only)
+ * This function remains synchronous and checks environment variables
+ */
 export const hasPlaceholderEmails = (): boolean => {
-  const managers = getManagerConfigurations()
+  const managers = getEnvironmentManagerConfigurations()
   const placeholderEmails = [
     'basera@btinternet.com',
-    'zara80@gmail.com', 
+    'zara80@gmail.com',
     'g.basera80@gmail.com',
     'g.basera5@gmail.com',
     'gizzy@dreampathdigitalsolutions.co.uk'
   ]
-  
-  return Object.values(managers).some(manager => 
+
+  return Object.values(managers).some(manager =>
     placeholderEmails.includes(manager.email)
   )
+}
+
+/**
+ * 🎯 DATABASE-DRIVEN PLACEHOLDER CHECK
+ * Checks if tenant has proper manager configurations in database
+ */
+export const hasTenantManagerConfigurations = async (tenantId?: string): Promise<boolean> => {
+  try {
+    const managers = await getTenantManagerConfigurations(tenantId)
+    // Check if we have real manager configurations (not just fallbacks)
+    return managers.general.email !== 'manager@hotel.com' &&
+           managers.general.name !== 'General Manager'
+  } catch (error) {
+    console.warn('Could not check tenant manager configurations:', error)
+    return false
+  }
 }

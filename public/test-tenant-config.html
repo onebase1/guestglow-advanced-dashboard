@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Configuration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .manager-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 Tenant Configuration System Test</h1>
+        <p>This page tests the new database-driven tenant configuration system.</p>
+        
+        <div class="test-section info">
+            <h2>📊 System Status</h2>
+            <div id="system-status">Initializing...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Database Manager Configurations</h2>
+            <button onclick="testDatabaseManagers()">Load Database Managers</button>
+            <div id="database-managers"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔄 Environment Variable Fallback</h2>
+            <button onclick="testEnvironmentManagers()">Load Environment Managers</button>
+            <div id="environment-managers"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Category Routing Test</h2>
+            <button onclick="testCategoryRouting()">Test Category Routing</button>
+            <div id="category-routing"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 Tenant Information</h2>
+            <button onclick="loadTenantInfo()">Load Tenant Info</button>
+            <div id="tenant-info"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Configuration matching .env file
+        const SUPABASE_URL = "https://wzfpltamwhkncxjvulik.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbmN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk";
+
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Test system status
+        async function checkSystemStatus() {
+            const statusDiv = document.getElementById('system-status');
+            try {
+                // Test Supabase connection
+                const { data, error } = await supabase.from('tenants').select('count').limit(1);
+                if (error) throw error;
+                
+                statusDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Supabase Connection: OK<br>
+                        ✅ Database Access: OK<br>
+                        🕒 Ready for testing
+                    </div>
+                `;
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="error">
+                        ❌ System Error: ${error.message}<br>
+                        Please check your Supabase configuration
+                    </div>
+                `;
+            }
+        }
+
+        // Test database manager configurations
+        async function testDatabaseManagers() {
+            const resultDiv = document.getElementById('database-managers');
+            resultDiv.innerHTML = '<p>Loading database managers...</p>';
+            
+            try {
+                // Get Eusbett tenant ID
+                const { data: tenant, error: tenantError } = await supabase
+                    .from('tenants')
+                    .select('id, name, slug')
+                    .eq('slug', 'eusbett')
+                    .single();
+
+                if (tenantError) throw tenantError;
+
+                // Get manager configurations
+                const { data: managers, error: managersError } = await supabase
+                    .from('manager_configurations')
+                    .select('*')
+                    .eq('tenant_id', tenant.id)
+                    .eq('is_active', true)
+                    .order('is_primary', { ascending: false });
+
+                if (managersError) throw managersError;
+
+                let html = `<div class="success">
+                    <h3>✅ Database Managers Found (${managers.length})</h3>
+                    <p><strong>Tenant:</strong> ${tenant.name} (${tenant.slug})</p>
+                `;
+
+                managers.forEach(manager => {
+                    html += `
+                        <div class="manager-card">
+                            <strong>${manager.name}</strong> - ${manager.title}<br>
+                            📧 ${manager.email}<br>
+                            📞 ${manager.phone || 'N/A'}<br>
+                            🏢 ${manager.department}<br>
+                            ${manager.is_primary ? '⭐ Primary Manager' : ''}
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Database Error: ${error.message}<br>
+                        <pre>${JSON.stringify(error, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Test environment variable fallback
+        async function testEnvironmentManagers() {
+            const resultDiv = document.getElementById('environment-managers');
+            
+            // Simulate environment variables (these would come from import.meta.env in real app)
+            const envManagers = {
+                foodBeverage: {
+                    name: 'Sarah Johnson',
+                    email: 'basera@btinternet.com',
+                    title: 'Food & Beverage Manager',
+                    phone: '+233 24 123 4567',
+                    department: 'Food & Beverage'
+                },
+                housekeeping: {
+                    name: 'Michael Asante',
+                    email: 'zara80@gmail.com',
+                    title: 'Housekeeping Manager',
+                    phone: '+233 24 234 5678',
+                    department: 'Housekeeping'
+                },
+                general: {
+                    name: 'Hotel Manager',
+                    email: 'g.basera@yahoo.com',
+                    title: 'General Manager',
+                    phone: '+233 24 678 9012',
+                    department: 'Management'
+                }
+            };
+
+            let html = `<div class="info">
+                <h3>🔄 Environment Variable Fallback</h3>
+                <p>These would be loaded from environment variables if database fails:</p>
+            `;
+
+            Object.entries(envManagers).forEach(([key, manager]) => {
+                html += `
+                    <div class="manager-card">
+                        <strong>${manager.name}</strong> - ${manager.title}<br>
+                        📧 ${manager.email}<br>
+                        📞 ${manager.phone}<br>
+                        🏢 ${manager.department}
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultDiv.innerHTML = html;
+        }
+
+        // Test category routing
+        async function testCategoryRouting() {
+            const resultDiv = document.getElementById('category-routing');
+            resultDiv.innerHTML = '<p>Testing category routing...</p>';
+            
+            const categories = [
+                'Food & Beverage',
+                'Housekeeping',
+                'Security',
+                'Front Desk',
+                'Maintenance',
+                'General'
+            ];
+
+            try {
+                // Get Eusbett tenant ID
+                const { data: tenant } = await supabase
+                    .from('tenants')
+                    .select('id')
+                    .eq('slug', 'eusbett')
+                    .single();
+
+                // Get managers
+                const { data: managers } = await supabase
+                    .from('manager_configurations')
+                    .select('*')
+                    .eq('tenant_id', tenant.id)
+                    .eq('is_active', true);
+
+                let html = '<div class="success"><h3>🎯 Category Routing Results</h3>';
+                
+                categories.forEach(category => {
+                    // Simple category matching logic
+                    let assignedManager = managers.find(m => 
+                        m.department.toLowerCase().includes(category.toLowerCase()) ||
+                        category.toLowerCase().includes(m.department.toLowerCase())
+                    ) || managers.find(m => m.is_primary) || managers[0];
+
+                    html += `
+                        <div class="manager-card">
+                            <strong>${category}</strong> → ${assignedManager.name}<br>
+                            📧 ${assignedManager.email}
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Category Routing Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Load tenant information
+        async function loadTenantInfo() {
+            const resultDiv = document.getElementById('tenant-info');
+            resultDiv.innerHTML = '<p>Loading tenant information...</p>';
+            
+            try {
+                const { data: tenants, error } = await supabase
+                    .from('tenants')
+                    .select('*')
+                    .eq('is_active', true);
+
+                if (error) throw error;
+
+                let html = `<div class="info">
+                    <h3>🏢 Available Tenants (${tenants.length})</h3>
+                `;
+
+                tenants.forEach(tenant => {
+                    html += `
+                        <div class="manager-card">
+                            <strong>${tenant.name}</strong> (${tenant.slug})<br>
+                            📧 ${tenant.contact_email}<br>
+                            📞 ${tenant.contact_phone || 'N/A'}<br>
+                            🎨 Primary: ${tenant.primary_color}, Secondary: ${tenant.secondary_color}
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Tenant Info Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            checkSystemStatus();
+        });
+    </script>
+</body>
+</html>
