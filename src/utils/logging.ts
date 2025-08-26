@@ -204,9 +204,9 @@ class Logger {
       }
 
       const { error } = await supabase.rpc('log_system_event', eventData)
-      
+
       if (error) {
-        console.error('Failed to log event:', error)
+        console.warn('Failed to log event (non-critical):', error)
       }
     } catch (error) {
       console.error('Error logging event:', error)
@@ -227,12 +227,12 @@ class Logger {
       }
 
       const { error } = await supabase.rpc('record_performance_metric', metricData)
-      
+
       if (error) {
-        console.error('Failed to record metric:', error)
+        console.warn('Failed to record metric (non-critical):', error)
       }
     } catch (error) {
-      console.error('Error recording metric:', error)
+      console.warn('Error recording metric (non-critical):', error)
     }
   }
 

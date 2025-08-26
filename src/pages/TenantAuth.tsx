@@ -118,10 +118,16 @@ export default function TenantAuth() {
     if (!user || !tenantState.tenant) return
 
     try {
+      console.log('🔐 Starting authenticated redirect for user:', user.email)
+      console.log('🏨 Tenant:', tenantState.tenant.name, tenantState.tenant.id)
+
       // Validate user has access to this tenant
+      console.log('🔍 Validating tenant access...')
       const hasAccess = await validateTenantAccess(tenantState.tenant.id)
+      console.log('✅ Access validation result:', hasAccess)
 
       if (!hasAccess) {
+        console.error('❌ Access denied for user to tenant')
         toast({
           title: "Access Denied",
           description: `You don't have access to ${tenantState.tenant.name}`,
@@ -135,10 +141,16 @@ export default function TenantAuth() {
       }
 
       // Set tenant context
-      await supabase.rpc('set_tenant_context', {
-        tenant_id: tenantState.tenant.id,
-        tenant_slug: tenantSlug
-      })
+      console.log('🔧 Setting tenant context...')
+      try {
+        await supabase.rpc('set_tenant_context', {
+          p_tenant_id: tenantState.tenant.id,
+          p_tenant_slug: tenantSlug
+        })
+        console.log('✅ Tenant context set successfully')
+      } catch (contextError) {
+        console.warn('⚠️ Failed to set tenant context (non-critical):', contextError)
+      }
 
       // Show success message
       toast({
@@ -148,10 +160,11 @@ export default function TenantAuth() {
 
       // Redirect to return URL or tenant dashboard
       const targetUrl = returnUrl || `/${tenantSlug}/dashboard`
+      console.log('🚀 Redirecting to:', targetUrl)
       navigate(targetUrl)
 
     } catch (error: any) {
-      console.error('Redirect validation failed:', error)
+      console.error('❌ Redirect validation failed:', error)
       toast({
         title: "Authentication Error",
         description: error.message,
