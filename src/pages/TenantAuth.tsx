@@ -63,6 +63,11 @@ export default function TenantAuth() {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && tenantState.tenant && !authLoading) {
+      console.log('🔄 Auth state changed, triggering redirect...', {
+        hasUser: !!user,
+        hasTenant: !!tenantState.tenant,
+        authLoading
+      })
       handleAuthenticatedRedirect()
     }
   }, [user, tenantState.tenant, authLoading])
@@ -161,7 +166,14 @@ export default function TenantAuth() {
       // Redirect to return URL or tenant dashboard
       const targetUrl = returnUrl || `/${tenantSlug}/dashboard`
       console.log('🚀 Redirecting to:', targetUrl)
-      navigate(targetUrl)
+
+      // Use replace to avoid back button issues and ensure clean navigation
+      navigate(targetUrl, { replace: true })
+
+      // Set loading false after a short delay to ensure navigation completes
+      setTimeout(() => {
+        setAuthLoading(false)
+      }, 100)
 
     } catch (error: any) {
       console.error('❌ Redirect validation failed:', error)
@@ -196,19 +208,45 @@ export default function TenantAuth() {
 
     setAuthLoading(true)
     try {
+      console.log('🔐 Starting sign-in process...')
       const { error } = await signIn(email, password)
       if (error) throw error
 
-      // Don't show success toast here - let handleAuthenticatedRedirect handle it
-      // The useEffect will trigger handleAuthenticatedRedirect
+      console.log('✅ Sign-in successful, waiting for auth state update...')
+
+      // Wait a moment for auth state to update, then force redirect
+      setTimeout(async () => {
+        try {
+          // Get fresh session to ensure we have the latest auth state
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+          if (sessionError) {
+            console.error('❌ Session error:', sessionError)
+            setAuthLoading(false)
+            return
+          }
+
+          if (session?.user) {
+            console.log('🚀 Session confirmed, forcing redirect...')
+            await handleAuthenticatedRedirect()
+          } else {
+            console.warn('⚠️ No session found after sign-in')
+            setAuthLoading(false)
+          }
+        } catch (redirectError) {
+          console.error('❌ Redirect error:', redirectError)
+          setAuthLoading(false)
+        }
+      }, 500) // Small delay to ensure auth state is updated
 
     } catch (error: any) {
+      console.error('❌ Sign-in error:', error)
       toast({
         title: "Sign in failed",
         description: error.message || "Please check your credentials and try again.",
         variant: "destructive"
       })
-      setAuthLoading(false) // Only set loading false on error
+      setAuthLoading(false)
     }
   }
 
