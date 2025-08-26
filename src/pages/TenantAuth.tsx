@@ -49,17 +49,23 @@ export default function TenantAuth() {
   const navigate = useNavigate()
   const branding = useTenantBranding()
 
-  // Validate tenant on component mount
+  // Validate tenant on component mount and pre-fill email if provided
   useEffect(() => {
     validateTenant()
-  }, [tenantSlug])
+
+    // Pre-fill email if provided in URL (from smart auth)
+    const emailParam = searchParams.get('email')
+    if (emailParam) {
+      setEmail(decodeURIComponent(emailParam))
+    }
+  }, [tenantSlug, searchParams])
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user && tenantState.tenant) {
+    if (user && tenantState.tenant && !authLoading) {
       handleAuthenticatedRedirect()
     }
-  }, [user, tenantState.tenant])
+  }, [user, tenantState.tenant, authLoading])
 
   const validateTenant = async () => {
     if (!tenantSlug) {
@@ -114,23 +120,30 @@ export default function TenantAuth() {
     try {
       // Validate user has access to this tenant
       const hasAccess = await validateTenantAccess(tenantState.tenant.id)
-      
+
       if (!hasAccess) {
         toast({
           title: "Access Denied",
           description: `You don't have access to ${tenantState.tenant.name}`,
           variant: "destructive"
         })
-        
+
         // Sign out and stay on auth page
         await supabase.auth.signOut()
+        setAuthLoading(false)
         return
       }
 
       // Set tenant context
-      await supabase.rpc('set_tenant_context', { 
+      await supabase.rpc('set_tenant_context', {
         tenant_id: tenantState.tenant.id,
-        tenant_slug: tenantSlug 
+        tenant_slug: tenantSlug
+      })
+
+      // Show success message
+      toast({
+        title: "Welcome back!",
+        description: `Signed in to ${tenantState.tenant.name}`
       })
 
       // Redirect to return URL or tenant dashboard
@@ -144,6 +157,7 @@ export default function TenantAuth() {
         description: error.message,
         variant: "destructive"
       })
+      setAuthLoading(false)
     }
   }
 
@@ -171,13 +185,9 @@ export default function TenantAuth() {
     try {
       const { error } = await signIn(email, password)
       if (error) throw error
-      
-      toast({
-        title: "Welcome back!",
-        description: `Signed in to ${tenantState.tenant.name}`
-      })
 
-      // handleAuthenticatedRedirect will be called by useEffect
+      // Don't show success toast here - let handleAuthenticatedRedirect handle it
+      // The useEffect will trigger handleAuthenticatedRedirect
 
     } catch (error: any) {
       toast({
@@ -185,8 +195,7 @@ export default function TenantAuth() {
         description: error.message || "Please check your credentials and try again.",
         variant: "destructive"
       })
-    } finally {
-      setAuthLoading(false)
+      setAuthLoading(false) // Only set loading false on error
     }
   }
 
@@ -269,10 +278,14 @@ export default function TenantAuth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           {tenant.logo_url && (
-            <img 
-              src={tenant.logo_url} 
+            <img
+              src={tenant.logo_url}
               alt={`${tenant.name} logo`}
               className="h-12 mx-auto mb-4"
+              onError={(e) => {
+                // Hide broken images gracefully
+                e.currentTarget.style.display = 'none'
+              }}
             />
           )}
           <CardTitle className="text-2xl font-bold" style={{ color: tenant.primary_color }}>

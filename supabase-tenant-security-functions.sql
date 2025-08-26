@@ -122,7 +122,7 @@ RETURNS TABLE(
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     t.id,
     t.name,
     t.slug,
@@ -130,7 +130,47 @@ BEGIN
     BOOL_OR(ur.is_primary) as is_primary
   FROM public.tenants t
   INNER JOIN public.user_roles ur ON t.id = ur.tenant_id
-  WHERE ur.user_id = p_user_id 
+  WHERE ur.user_id = p_user_id
+    AND ur.is_active = true
+    AND t.is_active = true
+  GROUP BY t.id, t.name, t.slug
+  ORDER BY BOOL_OR(ur.is_primary) DESC, t.name;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user's accessible tenants by email (for smart auth)
+CREATE OR REPLACE FUNCTION public.get_user_tenants_by_email(p_email TEXT)
+RETURNS TABLE(
+  tenant_id UUID,
+  tenant_name TEXT,
+  tenant_slug TEXT,
+  user_roles TEXT[],
+  is_primary BOOLEAN
+) AS $$
+DECLARE
+  user_uuid UUID;
+BEGIN
+  -- Get user UUID from auth.users by email
+  SELECT id INTO user_uuid
+  FROM auth.users
+  WHERE email = p_email;
+
+  -- If user not found, return empty result
+  IF user_uuid IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Return user's accessible tenants
+  RETURN QUERY
+  SELECT
+    t.id,
+    t.name,
+    t.slug,
+    ARRAY_AGG(ur.role) as roles,
+    BOOL_OR(ur.is_primary) as is_primary
+  FROM public.tenants t
+  INNER JOIN public.user_roles ur ON t.id = ur.tenant_id
+  WHERE ur.user_id = user_uuid
     AND ur.is_active = true
     AND t.is_active = true
   GROUP BY t.id, t.name, t.slug
@@ -192,6 +232,7 @@ GRANT EXECUTE ON FUNCTION public.set_tenant_context(UUID, TEXT) TO authenticated
 GRANT EXECUTE ON FUNCTION public.get_current_tenant_context() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.validate_user_tenant_access(UUID, UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_user_accessible_tenants(UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_user_tenants_by_email(TEXT) TO authenticated, anon, service_role;
 
 -- Grant table permissions
 GRANT SELECT, INSERT ON public.access_logs TO authenticated, service_role;
