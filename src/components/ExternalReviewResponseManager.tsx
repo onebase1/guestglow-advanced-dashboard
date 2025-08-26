@@ -246,7 +246,7 @@ export default function ExternalReviewResponseManager() {
         sentiment: review.sentiment || 'neutral',
         tenant_name: tenant.name,
         brand_voice: tenant.brand_voice || 'professional and friendly',
-        contact_email: tenant.contact_email || 'guestrelations@eusbetthotel.com'
+        contact_email: tenant.contact_email || 'system-fallback@guest-glow.com'
       });
 
       // Get system prompt
@@ -370,7 +370,7 @@ export default function ExternalReviewResponseManager() {
 
 I sincerely apologize for the specific issues you raised regarding **WiFi connectivity, room cleanliness, water pressure, breakfast service, and staff service**. This does not reflect the **exceptional standards we strive to maintain**, and we take full responsibility for not meeting your expectations. We have immediately addressed these concerns with our team and have implemented enhanced protocols to ensure better service delivery for all our guests.
 
-Your feedback is instrumental in our continuous improvement efforts, and we would be honored to welcome you back to demonstrate the improvements we've made. Please feel free to contact me directly at **guestrelations@eusbetthotel.com** for your next visit, and I will personally ensure your experience exceeds expectations.
+Your feedback is instrumental in our continuous improvement efforts, and we would be honored to welcome you back to demonstrate the improvements we've made. Please feel free to contact me directly at **system-fallback@guest-glow.com** for your next visit, and I will personally ensure your experience exceeds expectations.
 
 **Warm regards,**
 The Eusbett Hotel Guest Relations Team

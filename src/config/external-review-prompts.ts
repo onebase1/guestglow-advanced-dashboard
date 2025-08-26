@@ -271,7 +271,7 @@ We're sorry to hear about the issues you encountered during your stay. The WiFi 
 
 We've been working on upgrading our internet infrastructure, and your feedback confirms we need to accelerate these improvements. We've also spoken with our kitchen team about maintaining proper food temperatures.
 
-We'd appreciate the chance to discuss this with you directly - please reach out to guestrelations@eusbetthotel.com so we can make this right.
+We'd appreciate the chance to discuss this with you directly - please reach out to system-fallback@guest-glow.com so we can make this right.
 
 Best regards,
 The Eusbett Hotel Guest Relations Team`,

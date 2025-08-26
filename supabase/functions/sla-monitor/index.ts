@@ -230,7 +230,7 @@ async function sendReminderEmail(supabase: any, result: SLACheckResult) {
       </div>
     </div>`;
 
-  const managerEmail = result.assigned_manager?.email || 'g.basera@yahoo.com';
+  const managerEmail = result.assigned_manager?.email || 'system-fallback@guest-glow.com';
 
   return await supabase.functions.invoke('send-tenant-emails', {
     body: {
@@ -276,8 +276,10 @@ async function sendEscalationEmail(supabase: any, result: SLACheckResult) {
       </div>
     </div>`;
 
-  // Escalate to General Manager for high-level escalations
-  const recipientEmail = result.escalation_level >= 2 ? 'g.basera@yahoo.com' : (result.assigned_manager?.email || 'g.basera@yahoo.com');
+  // Escalate to safe fallback for all escalation levels
+  const recipientEmail = result.escalation_level >= 3 ? 'system-fallback@guest-glow.com' :
+                         result.escalation_level >= 2 ? 'system-fallback@guest-glow.com' :
+                         (result.assigned_manager?.email || 'system-fallback@guest-glow.com');
 
   return await supabase.functions.invoke('send-tenant-emails', {
     body: {

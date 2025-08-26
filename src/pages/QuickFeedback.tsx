@@ -530,6 +530,12 @@ export default function QuickFeedback() {
                         <SelectItem value="Check-in/Check-out">🔑 Check-in/Check-out</SelectItem>
                         <SelectItem value="Staff Behavior">💼 Staff</SelectItem>
                         <SelectItem value="Noise">🔊 Noise</SelectItem>
+                        <SelectItem value="Conferences/Meetings">🎤 Conferences/Meetings</SelectItem>
+                        <SelectItem value="Internet">📶 Internet</SelectItem>
+                        <SelectItem value="Spa">💆 Spa</SelectItem>
+                        <SelectItem value="Gym">💪 Gym</SelectItem>
+                        <SelectItem value="Security">🔒 Security</SelectItem>
+                        <SelectItem value="Swimming Pool">🏊 Swimming Pool</SelectItem>
                         <SelectItem value="Other">📝 Other</SelectItem>
                       </SelectContent>
                     </Select>
@@ -662,7 +668,7 @@ export default function QuickFeedback() {
                           Send Copy
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Or email us at {tenant.contact_email || 'manager@hotel.com'}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Or email us at {tenant.contact_email || 'system-fallback@guest-glow.com'}</p>
                     </div>
                   </div>
                 )}

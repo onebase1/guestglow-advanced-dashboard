@@ -268,8 +268,7 @@ export const validateTenantAccessWithRoles = async (
 }
 
 // Default tenant configuration for Eusbett
-// NOTE: For testing, using g.basera@yahoo.com
-// PRODUCTION: Change back to 'robert.mensah@eusbetthotel.com' before go-live
+// 🔒 SAFE FALLBACK: Using system fallback email to prevent accidental client emails
 export const DEFAULT_TENANT: Tenant = {
   id: '',
   name: 'Eusbett Hotel',
@@ -278,7 +277,7 @@ export const DEFAULT_TENANT: Tenant = {
   primary_color: '#003D7A', // Navy blue (main brand color)
   secondary_color: '#E74C3C', // Red accent
   logo_url: '/eusbett-logo.svg',
-  contact_email: 'g.basera@yahoo.com', // TESTING EMAIL - Change to robert.mensah@eusbetthotel.com for production
+  contact_email: 'system-fallback@guest-glow.com', // SAFE: System fallback - no real client emails
   contact_phone: '+233 24 479 9348',
   is_active: true
 }

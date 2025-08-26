@@ -15,9 +15,9 @@ interface EscalationRequest {
 }
 
 interface ManagerHierarchy {
-  primary: any;
-  backup: any;
+  guest_relations: any;
   general_manager: any;
+  operations_director: any;
 }
 
 serve(async (req) => {
@@ -220,9 +220,9 @@ async function getManagementHierarchy(supabase: any, issueCategory: string): Pro
   const general_manager = allManagers?.find(m => m.department === 'Management' || m.title.toLowerCase().includes('general'));
 
   return {
-    primary: primary || { id: null, name: 'Primary Manager', email: 'g.basera@yahoo.com', department: 'Operations', title: 'Manager' },
-    backup: backup || { id: null, name: 'Backup Manager', email: 'g.basera@yahoo.com', department: 'Operations', title: 'Assistant Manager' },
-    general_manager: general_manager || { id: null, name: 'General Manager', email: 'g.basera@yahoo.com', department: 'Management', title: 'General Manager' }
+    guest_relations: primary || { id: null, name: 'Guest Relations Team', email: 'system-fallback@guest-glow.com', department: 'Guest Relations', title: 'Guest Relations Manager' },
+    general_manager: general_manager || { id: null, name: 'General Manager', email: 'system-fallback@guest-glow.com', department: 'Management', title: 'General Manager' },
+    operations_director: { id: null, name: 'Operations Director', email: 'system-fallback@guest-glow.com', department: 'Management', title: 'Operations Director' }
   };
 }
 
@@ -230,13 +230,13 @@ async function getManagementHierarchy(supabase: any, issueCategory: string): Pro
 function getNextEscalationTarget(hierarchy: ManagerHierarchy, escalationLevel: number) {
   switch (escalationLevel) {
     case 1:
-      return hierarchy.primary;
+      return hierarchy.guest_relations;  // All feedback starts with Guest Relations
     case 2:
-      return hierarchy.backup;
     case 3:
+      return hierarchy.general_manager;  // Escalate to GM
     case 4:
     case 5:
-      return hierarchy.general_manager;
+      return hierarchy.operations_director; // Final escalation to Edward Bennett
     default:
       return null; // Maximum escalation reached
   }
