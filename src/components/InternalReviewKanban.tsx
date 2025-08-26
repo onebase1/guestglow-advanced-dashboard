@@ -16,10 +16,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
-import { 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Clock,
+  AlertTriangle,
+  CheckCircle,
   MessageSquare,
   Mail,
   User,
@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { CommunicationLogsModal } from './CommunicationLogsModal';
 
 interface InternalReview {
   id: string;
@@ -91,6 +92,8 @@ const CATEGORY_COLORS = {
 export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReviewKanbanProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [communicationLogsOpen, setCommunicationLogsOpen] = useState(false);
+  const [selectedFeedbackForLogs, setSelectedFeedbackForLogs] = useState<InternalReview | null>(null);
   const { toast } = useToast();
 
   // Calculate SLA status and urgency
@@ -229,6 +232,11 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
     }
   };
 
+  const openCommunicationLogs = (feedback: InternalReview) => {
+    setSelectedFeedbackForLogs(feedback);
+    setCommunicationLogsOpen(true);
+  };
+
   const ReviewCard = ({ review }: { review: InternalReview & { priority?: number } }) => {
     const sla = calculateSLAStatus(review);
     
@@ -298,7 +306,13 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
               
               <div className="flex items-center gap-1">
                 {review.guest_email && (
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => openCommunicationLogs(review)}
+                    title="View email history"
+                  >
                     <Mail className="h-3 w-3" />
                   </Button>
                 )}
@@ -395,6 +409,16 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
           );
         })}
       </div>
+
+      {/* Communication Logs Modal */}
+      {selectedFeedbackForLogs && (
+        <CommunicationLogsModal
+          feedbackId={selectedFeedbackForLogs.id}
+          guestName={selectedFeedbackForLogs.guest_name || 'Anonymous'}
+          isOpen={communicationLogsOpen}
+          onClose={() => setCommunicationLogsOpen(false)}
+        />
+      )}
     </div>
   );
 }

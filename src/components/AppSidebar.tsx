@@ -132,7 +132,8 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
             {links.map((link, idx) => (
               <div
                 key={idx}
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault() // Prevent default link behavior
                   if (link.id === "qr-codes" && tenantSlug) {
                     navigate(`/${tenantSlug}/qr-studio`)
                   } else if (link.id === "marketing" && tenantSlug) {
@@ -150,7 +151,12 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
                   activeTab === link.id ? "bg-neutral-200 dark:bg-neutral-700 rounded-md" : ""
                 )}
               >
-                <SidebarLink link={link} />
+                <SidebarLink
+                  link={{
+                    ...link,
+                    href: "#" // Override href to prevent navigation
+                  }}
+                />
               </div>
             ))}
           </div>

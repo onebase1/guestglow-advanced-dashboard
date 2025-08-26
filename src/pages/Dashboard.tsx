@@ -69,6 +69,12 @@ export default function Dashboard() {
   const [tenant, setTenant] = useState<Tenant>(DEFAULT_TENANT)
   const [tenantLoading, setTenantLoading] = useState(true)
 
+  // Update activeTab when URL parameters change
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab') || "internal"
+    setActiveTab(tabFromUrl)
+  }, [searchParams])
+
   // Initialize tenant information
   useEffect(() => {
     const initializeTenant = async () => {
