@@ -192,25 +192,35 @@ export const validateTenantAccess = async (tenantId: string): Promise<boolean> =
     }
 
     try {
-      const { data: userRoles, error } = await supabase
-        .from('user_roles')
-        .select('tenant_id, role, is_active')
-        .eq('user_id', user.id)
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true)
+      // Use the database function for validation
+      const { data, error } = await supabase.rpc('validate_user_tenant_access', {
+        p_user_id: user.id,
+        p_tenant_id: tenantId
+      })
 
       if (error) {
-        // 🚨 PRODUCTION SECURITY: No development overrides
         console.error('Failed to validate tenant access:', error)
         return false
       }
 
-      // User must have at least one active role for this tenant
-      return userRoles && userRoles.length > 0
+      return data === true
     } catch (dbError) {
-      // 🚨 PRODUCTION SECURITY: No development overrides
-      console.error('Database error during tenant validation:', dbError)
-      return false
+      // Fallback to direct table query if function not available
+      console.warn('Database function not available, using direct query')
+
+      const { data: userRoles, error } = await supabase
+        .from('user_roles')
+        .select('tenant_id, role')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+
+      if (error) {
+        console.error('Database error during tenant validation:', dbError)
+        return false
+      }
+
+      // User must have at least one role for this tenant
+      return userRoles && userRoles.length > 0
     }
   } catch (error) {
     console.error('Error validating tenant access:', error)
@@ -234,7 +244,6 @@ export const validateTenantAccessWithRoles = async (
       .select('role')
       .eq('user_id', user.id)
       .eq('tenant_id', tenantId)
-      .eq('is_active', true)
 
     if (error) {
       console.error('Failed to validate tenant access with roles:', error)
