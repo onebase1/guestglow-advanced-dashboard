@@ -72,8 +72,8 @@ serve(async (req) => {
         if (feedbackRequest.guest_email) {
           console.log('⏰ Scheduling detailed AI email for 3 minutes from now...')
 
-          // Call the delayed email function (non-blocking)
-          const delayedEmailResult = await supabase.functions.invoke('send-delayed-ai-email', {
+          // Schedule the detailed AI email using the queue system (proper serverless approach)
+          const delayedEmailResult = await supabase.functions.invoke('schedule-detailed-thankyou', {
             body: {
               feedback_id: feedbackRequest.feedback_id,
               guest_name: feedbackRequest.guest_name,
@@ -333,37 +333,27 @@ function generateManagerEmailHtml(feedback: FeedbackEmailRequest, manager: any):
  * Generate HTML content for guest confirmation email
  */
 function generateGuestEmailHtml(feedback: FeedbackEmailRequest): string {
+  const hotelName = feedback.tenant_slug.charAt(0).toUpperCase() + feedback.tenant_slug.slice(1) + ' Hotel'
   return `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px;">
       <div style="background: #059669; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
         <h1 style="margin: 0; font-size: 24px;">Thank You for Your Feedback</h1>
-        <p style="margin: 10px 0 0 0; font-size: 16px;">${feedback.tenant_slug.charAt(0).toUpperCase() + feedback.tenant_slug.slice(1)} Hotel</p>
+        <p style="margin: 10px 0 0 0; font-size: 16px;">${hotelName}</p>
       </div>
-      
+
       <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
         <h2 style="color: #333; margin-top: 0;">Dear ${feedback.guest_name},</h2>
-        
-        <p>Thank you for taking the time to share your feedback with us. We have received your ${feedback.rating}-star review and truly appreciate your input.</p>
-        
-        <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
-          <h3 style="color: #333; margin-top: 0;">Your Feedback Summary</h3>
-          <p><strong>Rating:</strong> ${feedback.rating}/5 ⭐</p>
-          <p><strong>Category:</strong> ${feedback.issue_category}</p>
-          <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-        </div>
-        
-        <p>Your feedback has been forwarded to our ${feedback.issue_category} team, and we will review it carefully to improve our services.</p>
-        
-        ${feedback.rating <= 3 ? `
-        <div style="background: #fef3c7; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #f59e0b;">
-          <p style="margin: 0;"><strong>We want to make this right.</strong> A member of our team will be in touch with you soon to address your concerns and ensure your satisfaction.</p>
-        </div>
-        ` : ''}
-        
+
+        <p>Thank you for taking the time to share your feedback with us. This is a quick note to confirm we’ve received it.</p>
+
+        <p>Your comments have been passed to our Guest Relations team and are being reviewed so we can continue improving the experience for our guests.</p>
+
+        <p>We appreciate your support and look forward to welcoming you again.</p>
+
         <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
           <p style="color: #666; font-size: 14px;">
             Best regards,<br>
-            <strong>The ${feedback.tenant_slug.charAt(0).toUpperCase() + feedback.tenant_slug.slice(1)} Hotel Guest Relations Team</strong>
+            <strong>${hotelName} Team</strong>
           </p>
         </div>
       </div>

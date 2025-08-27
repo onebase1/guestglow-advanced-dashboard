@@ -88,8 +88,9 @@ serve(async (req) => {
       throw new Error(`Thank you generation failed: ${thankYouError.message}`)
     }
 
-    // Calculate scheduled time (3 minutes from now for testing, 15 for production)
-    const delayMinutes = request.delay_minutes || 3
+    // Calculate scheduled time (3 minutes default for testing, 15 for production)
+    // Respect explicit 0 for immediate scheduling
+    const delayMinutes = (request.delay_minutes !== undefined) ? request.delay_minutes : 3
     const scheduledFor = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString()
 
     // Create email HTML content
@@ -133,11 +134,6 @@ serve(async (req) => {
               <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
             </div>
             
-            ${request.rating <= 3 ? `
-            <div class="highlight">
-              <strong>We want to make this right.</strong> A member of our team will be in touch with you soon to address your concerns and ensure your satisfaction.
-            </div>
-            ` : ''}
           </div>
           
           <div class="footer">

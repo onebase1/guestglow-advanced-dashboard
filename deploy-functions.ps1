@@ -14,7 +14,9 @@ $functions = @(
     "scheduled-email-reports",
     "email-scheduler",
     "email-queue",
-    "email-analytics"
+    "email-analytics",
+    "schedule-detailed-thankyou",
+    "process-email-queue"
 )
 
 foreach ($func in $functions) {

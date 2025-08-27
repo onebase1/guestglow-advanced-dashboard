@@ -55,10 +55,20 @@ serve(async (req) => {
 
     // Determine sender based on email type
     const senderConfig = getSenderConfig(emailRequest.email_type)
-    
+
+    // Tenant-specific display name
+    const hotelName = emailRequest.tenant_slug
+      ? emailRequest.tenant_slug.charAt(0).toUpperCase() + emailRequest.tenant_slug.slice(1) + ' Hotel'
+      : 'Hotel Team'
+    const displayName = emailRequest.email_type === 'guest_confirmation'
+      ? `${hotelName} Team`
+      : emailRequest.email_type === 'detailed_thankyou'
+        ? `${hotelName} Guest Relations`
+        : senderConfig.name
+
     // Prepare email payload for Resend
     const emailPayload = {
-      from: senderConfig.from,
+      from: `${displayName} <${senderConfig.from}>`,
       to: [emailRequest.recipient_email],
       cc: emailRequest.cc_emails || [],
       bcc: emailRequest.bcc_emails || [],
@@ -69,7 +79,8 @@ serve(async (req) => {
         'X-Tenant-Slug': emailRequest.tenant_slug,
         'X-Email-Type': emailRequest.email_type,
         'X-Priority': emailRequest.priority
-      }
+      },
+      reply_to: emailRequest.email_type === 'detailed_thankyou' ? 'guestrelations@guest-glow.com' : undefined
     }
 
     console.log('📤 Sending email via Resend:', {
@@ -116,7 +127,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Email sending failed:', error)
-    
+
     return new Response(
       JSON.stringify({
         success: false,
@@ -152,13 +163,18 @@ function getSenderConfig(emailType: string): { from: string; name: string } {
 
     // Guest communications
     'guest_confirmation': {
-      from: 'feedback@guest-glow.com',
-      name: 'GuestGlow Feedback'
+      from: 'donotreply@guest-glow.com',
+      name: 'Eusbett Hotel Team'
     },
     'guest_thank_you': {
       from: 'feedback@guest-glow.com',
       name: 'GuestGlow Feedback'
     },
+      'detailed_thankyou': {
+        from: 'guestrelations@guest-glow.com',
+        name: 'GuestGlow Guest Relations'
+      },
+
     'satisfaction_followup': {
       from: 'relations@guest-glow.com',
       name: 'GuestGlow Guest Relations'

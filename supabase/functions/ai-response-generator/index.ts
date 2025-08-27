@@ -121,14 +121,14 @@ async function generateAIResponse(params: {
         messages: [
           {
             role: 'system',
-            content: `You are a professional hotel guest relations specialist. Generate ${params.isExternal ? 'public review responses' : 'personalized guest thank-you emails'} that are warm, genuine, and ${params.brandVoice}.`
+            content: `You are a professional hotel guest relations specialist. Generate ${params.isExternal ? 'public review responses' : 'personalized guest thank-you emails'} that are warm, genuine, concise, and ${params.brandVoice}. Keep to the requested structure and approximate word count.`
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: params.isExternal ? 300 : 600,
+        max_tokens: params.isExternal ? 250 : 320,
         temperature: 0.7,
         presence_penalty: 0.3,
         frequency_penalty: 0.2
@@ -174,14 +174,14 @@ Requirements:
 - Address specific points mentioned in the review
 - Thank the guest for their feedback
 - ${params.rating <= 3 ? 'Acknowledge concerns and show commitment to improvement' : 'Express gratitude and invite them back'}
-- Keep under 250 words
+- Keep under 200 words, 3 short paragraphs max
 - Sign as "${params.hotelName} Management Team"`
   }
 
-  // Internal guest thank-you email prompt
+  // Internal guest thank-you email prompt (short, structured)
   const issueAnalysis = analyzeIssues(params.reviewText, params.rating)
-  
-  return `Generate a personalized thank-you email for a hotel guest:
+
+  return `Generate a concise, personalized thank-you/apology email for a hotel guest.
 
 Guest: ${params.guestName}
 Rating: ${params.rating}/5 stars
@@ -189,23 +189,26 @@ Feedback: "${params.reviewText}"
 Hotel: ${params.hotelName}
 Issues identified: ${issueAnalysis.join(', ') || 'None'}
 
-Requirements:
-- Warm, personal, and ${params.brandVoice} tone
-- 400-600 words (detailed but not overwhelming)
-- Address specific feedback points mentioned
-- ${params.rating <= 3 ? 'Provide specific apologies and improvement commitments' : 'Express genuine gratitude'}
-- Include specific next steps or improvements we're making
-- Invite them back with a subtle mention of future stays
-- Sign as "The ${params.hotelName} Guest Relations Team"
-- Make it feel like a real person wrote it, not AI
+Strict format and style:
+- 130–170 words total
+- Exactly 4 short paragraphs, each 1–2 sentences (no more, no less)
+- First line must be: "Dear ${params.guestName},"
+- Paragraph 1: Thank them and reference the ${params.rating}-star rating
+- Paragraph 2: ${params.rating <= 3 ? 'One-sentence apology referencing the key issue(s) succinctly' : 'One-sentence appreciation referencing a specific highlight'}
+- Paragraph 3: 1–2 specific action(s) we are taking (concise, factual), e.g., “we’re working with our technical/service team to review and resolve”
+- Paragraph 4: Invite them back and offer to assist directly (do not promise contact; do not imply a specific person will reach out)
+- After paragraph 4, add exactly two lines: "Warm regards," then "${params.hotelName} Team"
+- Tone: warm, sincere, professional, and ${params.brandVoice}
+- Avoid repetition and long sentences; no bullet points; no headings
+- Do NOT say phrases like "we want to make this right", "a member of our team will be in touch", "AI", or anything that reveals automation
 
-Focus on being genuine, specific, and actionable rather than generic.`
+Output: plain text only.`
 }
 
 /**
  * Analyze feedback text for specific issues
  */
-function analyzeIssues(feedbackText: string, rating: number): string[] {
+function analyzeIssues(feedbackText: string, _rating: number): string[] {
   const issues: string[] = []
   const text = feedbackText.toLowerCase()
   

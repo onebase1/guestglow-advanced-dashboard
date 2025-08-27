@@ -1,10 +1,3 @@
-/*
-ORPHANED FILE: supabase/functions/email-queue/index.ts
-This file appears to be orphaned and no longer used in the current system
-The email system now uses direct sending instead of queuing
-Commenting out to prevent accidental execution
-TODO: Verify this file is not needed and delete if confirmed
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -12,10 +5,9 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-*/
 
 interface QueueRequest {
-  action: 'enqueue' | 'process' | 'retry' | 'status' | 'clear'
+  action: 'enqueue' | 'add' | 'process' | 'retry' | 'status' | 'clear'
   email_data?: any
   queue_id?: string
   max_retries?: number
@@ -58,6 +50,7 @@ serve(async (req) => {
     let result
     switch (request.action) {
       case 'enqueue':
+      case 'add': // Support both 'enqueue' and 'add' for compatibility
         result = await enqueueEmail(supabase, request)
         break
       case 'process':
@@ -385,4 +378,3 @@ async function createEmailQueueTable(supabase: any) {
     // Continue anyway, table might already exist
   }
 }
-*/
