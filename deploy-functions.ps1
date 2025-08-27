@@ -10,6 +10,7 @@ $functions = @(
     "send-tenant-emails",
     "generate-feedback-emails", 
     "send-feedback-link",
+    "send-delayed-ai-email",
     "thank-you-generator",
     "scheduled-email-reports",
     "email-scheduler",

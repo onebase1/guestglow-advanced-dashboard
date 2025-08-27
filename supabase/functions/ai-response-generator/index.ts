@@ -7,13 +7,18 @@ const corsHeaders = {
 }
 
 interface AIRequest {
-  reviewText: string
+  reviewText?: string
+  feedback_text?: string
   rating: number
-  isExternal: boolean
+  isExternal?: boolean
   platform?: string
-  guestName: string
+  guestName?: string
+  guest_name?: string
   tenant_id: string
   tenant_slug: string
+  issue_category?: string
+  room_number?: string
+  analysis_type?: 'severity_assessment' | 'guest_response'
 }
 
 serve(async (req) => {
@@ -24,12 +29,42 @@ serve(async (req) => {
 
   try {
     const request: AIRequest = await req.json()
+    
+    // Handle both old and new request formats
+    const guestName = request.guestName || request.guest_name || 'Guest'
+    const feedbackText = request.reviewText || request.feedback_text || ''
+    const analysisType = request.analysis_type || 'guest_response'
+    
     console.log('🤖 Generating AI response for:', {
-      guest: request.guestName,
+      guest: guestName,
       rating: request.rating,
       tenant: request.tenant_slug,
-      isExternal: request.isExternal
+      isExternal: request.isExternal,
+      analysisType
     })
+    
+    // Handle severity analysis requests
+    if (analysisType === 'severity_assessment') {
+      const severityResponse = await generateSeverityAnalysis({
+        feedbackText,
+        rating: request.rating,
+        guestName,
+        issueCategory: request.issue_category || 'General',
+        roomNumber: request.room_number
+      })
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          content: severityResponse,
+          type: 'severity_analysis'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      )
+    }
 
     // Initialize Supabase client
     const supabase = createClient(
@@ -49,12 +84,12 @@ serve(async (req) => {
 
     // Generate AI-powered response using OpenAI
     const response = await generateAIResponse({
-      reviewText: request.reviewText,
+      reviewText: feedbackText,
       rating: request.rating,
-      guestName: request.guestName,
+      guestName,
       hotelName,
       brandVoice,
-      isExternal: request.isExternal,
+      isExternal: request.isExternal || false,
       platform: request.platform
     })
 
@@ -62,7 +97,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         response: response,
-        guest_name: request.guestName,
+        guest_name: guestName,
         rating: request.rating,
         type: request.isExternal ? 'external_response' : 'guest_thank_you'
       }),
@@ -195,12 +230,14 @@ Strict format and style:
 - First line must be: "Dear ${params.guestName},"
 - Paragraph 1: Thank them and reference the ${params.rating}-star rating
 - Paragraph 2: ${params.rating <= 3 ? 'One-sentence apology referencing the key issue(s) succinctly' : 'One-sentence appreciation referencing a specific highlight'}
-- Paragraph 3: 1–2 specific action(s) we are taking (concise, factual), e.g., “we’re working with our technical/service team to review and resolve”
+- Paragraph 3: 1–2 specific action(s) we are taking (concise, factual), e.g., "we're working with our technical/service team to review and resolve"
 - Paragraph 4: Invite them back and offer to assist directly (do not promise contact; do not imply a specific person will reach out)
 - After paragraph 4, add exactly two lines: "Warm regards," then "${params.hotelName} Team"
 - Tone: warm, sincere, professional, and ${params.brandVoice}
+- ALWAYS use "we" not "I" - this is from the Guest Relations Team
 - Avoid repetition and long sentences; no bullet points; no headings
 - Do NOT say phrases like "we want to make this right", "a member of our team will be in touch", "AI", or anything that reveals automation
+- Do NOT mention compensation, goodwill gestures, refunds, or monetary offers
 
 Output: plain text only.`
 }
@@ -262,8 +299,127 @@ We hope to have the pleasure of welcoming you back soon for another exceptional 
 We would welcome the opportunity to provide you with a much better experience in the future.`
 }
 
-With warm regards,
+Warm regards,
 The ${params.hotelName} Guest Relations Team`
+}
+
+/**
+ * Generate AI-powered severity analysis for feedback
+ */
+async function generateSeverityAnalysis(params: {
+  feedbackText: string
+  rating: number
+  guestName: string
+  issueCategory: string
+  roomNumber?: string
+}): Promise<string> {
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+  
+  if (!openaiApiKey) {
+    console.warn('⚠️ OpenAI API key not found, using rule-based severity analysis')
+    return generateRuleBasedSeverityAnalysis(params.feedbackText, params.rating)
+  }
+
+  const prompt = createSeverityAnalysisPrompt(params)
+  
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-2024-08-06',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a hotel guest experience analyst. Your job is to analyze guest feedback and determine severity levels for management escalation. Focus on safety, security, health violations, staff misconduct, discrimination, and serious operational failures.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.3,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.choices[0]?.message?.content?.trim() || generateRuleBasedSeverityAnalysis(params.feedbackText, params.rating)
+
+  } catch (error) {
+    console.error('OpenAI severity analysis failed:', error)
+    return generateRuleBasedSeverityAnalysis(params.feedbackText, params.rating)
+  }
+}
+
+/**
+ * Create severity analysis prompt
+ */
+function createSeverityAnalysisPrompt(params: {
+  feedbackText: string
+  rating: number
+  guestName: string
+  issueCategory: string
+  roomNumber?: string
+}): string {
+  return `Analyze this hotel guest feedback for severity level and escalation requirements:
+
+Guest: ${params.guestName}
+Room: ${params.roomNumber || 'N/A'}
+Rating: ${params.rating}/5 stars
+Category: ${params.issueCategory}
+Feedback: "${params.feedbackText}"
+
+Determine if this requires GENERAL MANAGER ESCALATION based on:
+- Safety/security concerns
+- Health violations (mold, bed bugs, food poisoning)
+- Staff misconduct or harassment
+- Discrimination
+- Legal threats or serious liability issues
+- Major operational failures
+
+Ignore minor issues like slow wifi, noise, or basic service complaints.
+
+Respond with exactly this format:
+SEVERITY: [HIGH/MEDIUM/LOW]
+GM_ESCALATION: [YES/NO]
+REASON: [Brief explanation in one sentence]
+KEYWORDS: [List any serious issue keywords found]`
+}
+
+/**
+ * Generate rule-based severity analysis when AI is unavailable
+ */
+function generateRuleBasedSeverityAnalysis(feedbackText: string, rating: number): string {
+  const text = feedbackText.toLowerCase()
+  
+  const criticalKeywords = [
+    'safety', 'security', 'mold', 'bed bugs', 'harassment', 'assault', 'theft',
+    'discrimination', 'inappropriate', 'legal', 'lawsuit', 'danger', 'emergency',
+    'health violation', 'food poisoning', 'misconduct'
+  ]
+  
+  const foundKeywords = criticalKeywords.filter(keyword => text.includes(keyword))
+  const hasHighRisk = foundKeywords.length > 0
+  
+  let severity = 'LOW'
+  if (hasHighRisk) {
+    severity = 'HIGH'
+  } else if (rating <= 2) {
+    severity = 'MEDIUM'
+  }
+  
+  return `SEVERITY: ${severity}
+GM_ESCALATION: ${hasHighRisk ? 'YES' : 'NO'}
+REASON: ${hasHighRisk ? 'Contains serious safety/security/health concerns' : rating <= 2 ? 'Low rating requiring attention' : 'Standard feedback'}
+KEYWORDS: ${foundKeywords.join(', ') || 'None'}`
 }
 
 /**
