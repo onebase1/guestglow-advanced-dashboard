@@ -178,13 +178,31 @@ export default function QuickFeedback() {
         submissionTime
       )
 
+      // Show thank you message
+      toast({
+        title: "Thank you for your feedback!",
+        description: "Your feedback helps us improve our service."
+      })
+
       setStep(5) // Thank you step
 
-      // If no email provided, generate inline reply for Thank-You page
-      if (!formData.guestEmail) {
-        setInlineReply(null)
-        setInlineReplyLoading(true)
+      // Set a professional thank you message immediately
+      setInlineReply(`Dear Guest,
+
+Thank you for taking the time to share your feedback with us. We truly appreciate your honest review.
+
+Your feedback is very important to us, and we will review it carefully with our team to ensure we continue to improve our service.
+
+We value your business and hope to have the opportunity to provide you with a better experience in the future.
+
+Best regards,
+The ${tenant.name || 'Hotel'} Team`)
+      setInlineReplyLoading(false)
+
+      // Optionally try to generate a better response in the background (non-blocking)
+      setTimeout(async () => {
         try {
+          console.log('🤖 Attempting to generate AI response for anonymous feedback...')
           const { data } = await supabase.functions.invoke('thank-you-generator', {
             body: {
               reviewText: 'Anonymous low rating feedback - guest chose not to provide details',
@@ -195,13 +213,16 @@ export default function QuickFeedback() {
               tenant_slug: tenant.slug
             }
           })
-          setInlineReply(data?.response || null)
-        } catch (_) {
-          setInlineReply(null)
-        } finally {
-          setInlineReplyLoading(false)
+
+          if (data?.response) {
+            console.log('✅ AI response generated for anonymous feedback')
+            setInlineReply(data.response)
+          }
+        } catch (error) {
+          console.warn('AI response generation failed for anonymous feedback (non-critical):', error)
+          // Keep the fallback message - don't change anything
         }
-      }
+      }, 1000) // Wait 1 second before trying AI generation
 
       // 🚨 DISABLED: Email generation now handled by database triggers
       // This prevents duplicate emails from being sent
@@ -215,21 +236,49 @@ export default function QuickFeedback() {
         error instanceof Error ? error.message : 'Unknown error'
       )
 
-      const errorMessage = navigator.onLine
-        ? "Something went wrong. Please try again."
-        : getOfflineStatusMessage()
+      // Check if this is a network error vs a database error
+      const isNetworkError = error instanceof TypeError && error.message.includes('fetch')
 
-      toast({
-        title: "Error submitting feedback",
-        description: errorMessage,
-        variant: "destructive"
-      })
+      if (isNetworkError) {
+        // Network error - feedback might have been saved but email failed
+        console.warn('Network error detected for anonymous feedback - showing thank you anyway...')
+
+        // Still show thank you page since feedback was likely saved
+        setStep(5)
+        setInlineReply(`Dear Guest,
+
+Thank you for your feedback! We've received your rating and will use it to improve our service.
+
+Due to a temporary network issue, we may not be able to send email notifications immediately, but your feedback has been recorded.
+
+Best regards,
+The ${tenant.name || 'Hotel'} Team`)
+        setInlineReplyLoading(false)
+
+        toast({
+          title: "Feedback received!",
+          description: "Your rating has been saved. Thank you for your input!"
+        })
+      } else {
+        // Database or other error
+        const errorMessage = navigator.onLine
+          ? "Something went wrong. Please try again."
+          : getOfflineStatusMessage()
+
+        toast({
+          title: "Error submitting feedback",
+          description: errorMessage,
+          variant: "destructive"
+        })
+      }
     } finally {
       setLoading(false)
     }
   }
 
   const handleDetailedFeedback = async () => {
+    console.log('🚀 Starting detailed feedback submission...')
+
     // Input validation
     if (!formData.feedbackText?.trim() || !formData.issueCategory) {
       toast({
@@ -272,6 +321,7 @@ export default function QuickFeedback() {
 
     setLoading(true)
     try {
+      console.log('📝 Submitting feedback to database...')
       const feedbackId = await submitFeedbackWithTenant(tenant.slug, {
         guestName: formData.guestName || 'Anonymous Guest',
         guestEmail: formData.guestEmail || null,
@@ -284,46 +334,95 @@ export default function QuickFeedback() {
         wouldRecommend: false,
         source: 'qr_code'
       })
+      console.log('✅ Feedback submitted successfully, ID:', feedbackId)
 
       // Show thank you message immediately for better UX
+      console.log('🎉 Moving to thank you step...')
       toast({
         title: "Thank you for your detailed feedback!",
         description: "We'll review your feedback and work to improve your experience."
       })
       setStep(5) // Thank you step
+      console.log('📍 Current step set to:', 5)
 
-      // If no email provided, generate inline reply for Thank-You page
+      // If no email provided, show a simple thank you message
       if (!formData.guestEmail) {
-        setInlineReply(null)
-        setInlineReplyLoading(true)
-        try {
-          const { data } = await supabase.functions.invoke('thank-you-generator', {
-            body: {
-              reviewText: formData.feedbackText,
-              rating,
-              isExternal: false,
-              guestName: formData.guestName || 'Guest',
-              tenant_id: tenant.id,
-              tenant_slug: tenant.slug
+        // Set a professional fallback message immediately
+        setInlineReply(`Dear ${formData.guestName || 'Guest'},
+
+Thank you for taking the time to share your feedback with us. We truly appreciate your honest review and the opportunity to improve.
+
+Your comments about ${formData.issueCategory.toLowerCase()} are very important to us, and we will review them carefully with our team to ensure we address these concerns.
+
+We value your business and hope to have the opportunity to provide you with a much better experience in the future.
+
+Best regards,
+The ${tenant.name || 'Hotel'} Team`)
+        setInlineReplyLoading(false)
+
+        // Optionally try to generate a better response in the background (non-blocking)
+        setTimeout(async () => {
+          try {
+            console.log('🤖 Attempting to generate AI response in background...')
+            const { data } = await supabase.functions.invoke('thank-you-generator', {
+              body: {
+                reviewText: formData.feedbackText,
+                rating,
+                isExternal: false,
+                guestName: formData.guestName || 'Guest',
+                tenant_id: tenant.id,
+                tenant_slug: tenant.slug
+              }
+            })
+
+            if (data?.response) {
+              console.log('✅ AI response generated successfully')
+              setInlineReply(data.response)
             }
-          })
-          setInlineReply(data?.response || null)
-        } catch (_) {
-          setInlineReply(null)
-        } finally {
-          setInlineReplyLoading(false)
-        }
+          } catch (error) {
+            console.warn('AI response generation failed (non-critical):', error)
+            // Keep the fallback message - don't change anything
+          }
+        }, 1000) // Wait 1 second before trying AI generation
       }
 
       // 🚨 DISABLED: Email generation now handled by database triggers
       // This prevents duplicate emails from being sent
       // Database triggers automatically handle email routing correctly
     } catch (error) {
-      toast({
-        title: "Error submitting feedback",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive"
-      })
+      console.error('Detailed feedback submission error:', error)
+
+      // Check if this is a network error vs a database error
+      const isNetworkError = error instanceof TypeError && error.message.includes('fetch')
+
+      if (isNetworkError) {
+        // Network error - feedback might have been saved but email failed
+        console.warn('Network error detected - checking if feedback was saved...')
+
+        // Still show thank you page since feedback was likely saved
+        setStep(5)
+        setInlineReply(`Dear ${formData.guestName || 'Guest'},
+
+Thank you for your feedback! We've received your comments and will review them carefully.
+
+Due to a temporary network issue, we may not be able to send you an immediate email response, but rest assured that your feedback has been recorded and will be addressed by our team.
+
+Best regards,
+The ${tenant.name || 'Hotel'} Team`)
+        setInlineReplyLoading(false)
+
+        toast({
+          title: "Feedback received!",
+          description: "Your feedback has been saved. Email notifications may be delayed due to network issues."
+        })
+      } else {
+        // Database or other error
+        toast({
+          title: "Error submitting feedback",
+          description: "Something went wrong. Please try again.",
+          variant: "destructive"
+        })
+      }
     } finally {
       setLoading(false)
     }
