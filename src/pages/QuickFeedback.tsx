@@ -24,10 +24,22 @@ export default function QuickFeedback() {
   const roomNumber = searchParams.get('room') || '' // Keep for logging purposes only
   const areaParam = searchParams.get('area') || ''
   const categoryParam = (searchParams.get('category') || '').toLowerCase()
-  const [step, setStep] = useState(1)
-  const [rating, setRating] = useState(0)
-  const [wantToProvideDetails, setWantToProvideDetails] = useState(false)
-  const [formData, setFormData] = useState({
+  // Persist state across navigation using sessionStorage
+  const getStoredState = () => {
+    try {
+      const stored = sessionStorage.getItem('quickFeedbackState')
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  }
+
+  const storedState = getStoredState()
+
+  const [step, setStep] = useState(storedState?.step || 1)
+  const [rating, setRating] = useState(storedState?.rating || 0)
+  const [wantToProvideDetails, setWantToProvideDetails] = useState(storedState?.wantToProvideDetails || false)
+  const [formData, setFormData] = useState(storedState?.formData || {
     guestName: "",
     roomNumber: "", // Never auto-populate from QR code - prevents confusion when QR location ≠ complaint subject
     guestEmail: "",
@@ -40,9 +52,45 @@ export default function QuickFeedback() {
   const { toast } = useToast()
   const navigate = useNavigate()
   // Inline auto-reply state for Thank-You page when no contact provided
-  const [inlineReply, setInlineReply] = useState<string | null>(null)
+  const [inlineReply, setInlineReply] = useState<string | null>(storedState?.inlineReply || null)
   const [inlineReplyLoading, setInlineReplyLoading] = useState(false)
+  const [aiGenerationAttempted, setAiGenerationAttempted] = useState(false)
   const [emailCapture, setEmailCapture] = useState("")
+
+  // Save state to sessionStorage whenever key state changes
+  useEffect(() => {
+    const stateToSave = {
+      step,
+      rating,
+      wantToProvideDetails,
+      formData,
+      inlineReply
+    }
+    sessionStorage.setItem('quickFeedbackState', JSON.stringify(stateToSave))
+  }, [step, rating, wantToProvideDetails, formData, inlineReply])
+
+  // Clear stored state (call when feedback process is complete)
+  const clearStoredState = () => {
+    sessionStorage.removeItem('quickFeedbackState')
+  }
+
+  // Add a "Start Over" function for the thank you page
+  const startOver = () => {
+    clearStoredState()
+    setStep(1)
+    setRating(0)
+    setWantToProvideDetails(false)
+    setFormData({
+      guestName: "",
+      roomNumber: "",
+      guestEmail: "",
+      feedbackText: "",
+      issueCategory: "",
+    })
+    setInlineReply(null)
+    setAiGenerationAttempted(false)
+    setEmailCapture("")
+  }
 
   // Initialize tenant information
   useEffect(() => {
@@ -200,29 +248,32 @@ The ${tenant.name || 'Hotel'} Team`)
       setInlineReplyLoading(false)
 
       // Optionally try to generate a better response in the background (non-blocking)
-      setTimeout(async () => {
-        try {
-          console.log('🤖 Attempting to generate AI response for anonymous feedback...')
-          const { data } = await supabase.functions.invoke('thank-you-generator', {
-            body: {
-              reviewText: 'Anonymous low rating feedback - guest chose not to provide details',
-              rating,
-              isExternal: false,
-              guestName: 'Anonymous Guest',
-              tenant_id: tenant.id,
-              tenant_slug: tenant.slug
-            }
-          })
+      if (!aiGenerationAttempted) {
+        setAiGenerationAttempted(true)
+        setTimeout(async () => {
+          try {
+            console.log('🤖 Attempting to generate AI response for anonymous feedback...')
+            const { data } = await supabase.functions.invoke('ai-response-generator', {
+              body: {
+                reviewText: 'Anonymous low rating feedback - guest chose not to provide details',
+                rating,
+                isExternal: false,
+                guestName: 'Anonymous Guest',
+                tenant_id: tenant.id,
+                tenant_slug: tenant.slug
+              }
+            })
 
-          if (data?.response) {
-            console.log('✅ AI response generated for anonymous feedback')
-            setInlineReply(data.response)
+            if (data?.response) {
+              console.log('✅ AI response generated for anonymous feedback')
+              setInlineReply(data.response)
+            }
+          } catch (error) {
+            console.warn('AI response generation failed for anonymous feedback (non-critical):', error)
+            // Keep the fallback message - don't change anything
           }
-        } catch (error) {
-          console.warn('AI response generation failed for anonymous feedback (non-critical):', error)
-          // Keep the fallback message - don't change anything
-        }
-      }, 1000) // Wait 1 second before trying AI generation
+        }, 1000) // Wait 1 second before trying AI generation
+      }
 
       // 🚨 DISABLED: Email generation now handled by database triggers
       // This prevents duplicate emails from being sent
@@ -361,29 +412,32 @@ The ${tenant.name || 'Hotel'} Team`)
         setInlineReplyLoading(false)
 
         // Optionally try to generate a better response in the background (non-blocking)
-        setTimeout(async () => {
-          try {
-            console.log('🤖 Attempting to generate AI response in background...')
-            const { data } = await supabase.functions.invoke('thank-you-generator', {
-              body: {
-                reviewText: formData.feedbackText,
-                rating,
-                isExternal: false,
-                guestName: formData.guestName || 'Guest',
-                tenant_id: tenant.id,
-                tenant_slug: tenant.slug
-              }
-            })
+        if (!aiGenerationAttempted) {
+          setAiGenerationAttempted(true)
+          setTimeout(async () => {
+            try {
+              console.log('🤖 Attempting to generate AI response in background...')
+              const { data } = await supabase.functions.invoke('ai-response-generator', {
+                body: {
+                  reviewText: formData.feedbackText,
+                  rating,
+                  isExternal: false,
+                  guestName: formData.guestName || 'Guest',
+                  tenant_id: tenant.id,
+                  tenant_slug: tenant.slug
+                }
+              })
 
-            if (data?.response) {
-              console.log('✅ AI response generated successfully')
-              setInlineReply(data.response)
+              if (data?.response) {
+                console.log('✅ AI response generated successfully')
+                setInlineReply(data.response)
+              }
+            } catch (error) {
+              console.warn('AI response generation failed (non-critical):', error)
+              // Keep the fallback message - don't change anything
             }
-          } catch (error) {
-            console.warn('AI response generation failed (non-critical):', error)
-            // Keep the fallback message - don't change anything
-          }
-        }, 1000) // Wait 1 second before trying AI generation
+          }, 1000) // Wait 1 second before trying AI generation
+        }
       }
 
       // 🚨 DISABLED: Email generation now handled by database triggers
@@ -787,9 +841,18 @@ The ${tenant.name || 'Hotel'} Team`)
                   ) : null
                 })()}
 
-                <p className="text-sm text-muted-foreground">
-                  You can now close this page or submit another feedback.
-                </p>
+                <div className="space-y-3">
+                  <Button
+                    onClick={startOver}
+                    variant="outline"
+                    className="w-full max-w-xs"
+                  >
+                    Submit Another Feedback
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    You can now close this page or submit another feedback.
+                  </p>
+                </div>
               </div>
             )}
 

@@ -5,10 +5,28 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { QrCode, Download, Mail, Copy, Shield, Eye, MapPin } from "lucide-react"
+import { QrCode, Download, Mail, Copy, Shield, Eye, MapPin, TestTube, BarChart3 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import { getCurrentUserTenant, getTenantBySlug, getQRCodeUrl, type Tenant, DEFAULT_TENANT } from '@/utils/tenant'
+
+// A/B Testing variants for QR codes
+const QR_VARIANTS = [
+  { id: 'control', name: 'Control (Default)', description: 'Standard QR design', color: '#000000' },
+  { id: 'variant_a', name: 'Variant A (Branded)', description: 'Hotel branded colors', color: '#1f2937' },
+  { id: 'variant_b', name: 'Variant B (Minimal)', description: 'Clean minimal design', color: '#374151' },
+  { id: 'variant_c', name: 'Variant C (CTA)', description: 'With call-to-action text', color: '#059669' }
+]
+
+// Location types for tracking
+const LOCATION_TYPES = [
+  { id: 'reception', name: 'Reception', traffic: 'high' },
+  { id: 'lobby', name: 'Lobby', traffic: 'medium' },
+  { id: 'restaurant', name: 'Restaurant', traffic: 'high' },
+  { id: 'room', name: 'Guest Room', traffic: 'low' },
+  { id: 'common', name: 'Common Area', traffic: 'medium' },
+  { id: 'elevator', name: 'Elevator', traffic: 'high' }
+]
 
 export function QRCodeGenerator() {
   const [roomNumber, setRoomNumber] = useState("")
@@ -20,6 +38,14 @@ export function QRCodeGenerator() {
   const [emailLoading, setEmailLoading] = useState(false)
   const [guestEmail, setGuestEmail] = useState("")
   const [tenant, setTenant] = useState<Tenant>(DEFAULT_TENANT)
+
+  // A/B Testing state
+  const [qrVariant, setQrVariant] = useState("control")
+  const [locationType, setLocationType] = useState("reception")
+  const [locationName, setLocationName] = useState("")
+  const [abTestingEnabled, setAbTestingEnabled] = useState(false)
+  const [trackingStats, setTrackingStats] = useState<any>(null)
+
   const { toast } = useToast()
 
   // Initialize tenant information

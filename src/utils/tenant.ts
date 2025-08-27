@@ -85,7 +85,8 @@ export const submitFeedbackWithTenant = async (
   }
 ): Promise<string> => {
   try {
-    const { data, error } = await supabase.rpc('insert_feedback_with_tenant', {
+    // 1. Insert feedback into database
+    const { data: feedbackId, error } = await supabase.rpc('insert_feedback_with_tenant', {
       p_tenant_slug: tenantSlug,
       p_guest_name: feedbackData.guestName || 'Anonymous Guest',
       p_guest_email: feedbackData.guestEmail || null,
@@ -98,10 +99,45 @@ export const submitFeedbackWithTenant = async (
       p_would_recommend: feedbackData.wouldRecommend || null,
       p_source: feedbackData.source
     })
-    
+
     if (error) throw error
-    
-    return data // This is the feedback ID
+
+    // 2. Get tenant info for email generation
+    const tenant = await getTenantBySlug(tenantSlug)
+    if (!tenant) {
+      console.warn(`Tenant not found for slug: ${tenantSlug}, using default`)
+    }
+
+    // 3. Trigger email generation (non-blocking to avoid slowing down form submission)
+    setTimeout(async () => {
+      try {
+        console.log('📧 Triggering email generation for feedback:', feedbackId)
+        const { error: emailError } = await supabase.functions.invoke('generate-feedback-emails', {
+          body: {
+            feedback_id: feedbackId,
+            guest_name: feedbackData.guestName || 'Anonymous Guest',
+            guest_email: feedbackData.guestEmail || null,
+            room_number: feedbackData.roomNumber || null,
+            rating: feedbackData.rating,
+            feedback_text: feedbackData.feedbackText,
+            issue_category: feedbackData.issueCategory,
+            check_in_date: feedbackData.checkInDate || null,
+            tenant_id: tenant?.id || 'f47ac10b-58cc-4372-a567-0e02b2c3d479', // Fallback to Eusbett
+            tenant_slug: tenantSlug
+          }
+        })
+
+        if (emailError) {
+          console.error('❌ Email generation failed (non-critical):', emailError)
+        } else {
+          console.log('✅ Email generation triggered successfully')
+        }
+      } catch (error) {
+        console.error('❌ Email generation error (non-critical):', error)
+      }
+    }, 100) // Small delay to ensure feedback is committed to database
+
+    return feedbackId
   } catch (error) {
     console.error('Error submitting feedback:', error)
     throw error

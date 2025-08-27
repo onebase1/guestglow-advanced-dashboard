@@ -1,3 +1,9 @@
+/*
+ORPHANED FILE: test-sla-functions.js
+This file appears to be orphaned and no longer used in the current system
+Commenting out to prevent accidental execution
+TODO: Verify this file is not needed and delete if confirmed
+
 // SLA System Test Script
 // Run this in your browser console on any GuestGlow page
 
@@ -10,8 +16,9 @@ async function testSLAMonitor() {
         const { data, error } = await supabase.functions.invoke('sla-monitor', {
             body: {}
         });
-        
+
         if (error) throw error;
+*/
         
         console.log('✅ SLA Monitor Success:', data);
         return data;
@@ -211,3 +218,4 @@ console.log('- testSLA.checkUnresolved() - Check unresolved feedback');
 console.log('- testSLA.checkLogs() - Check communication logs');
 
 console.log('\n🚀 Ready! Run testSLA.runAll() to test everything!');
+*/

@@ -1,11 +1,18 @@
+/*
+ORPHANED FILE: test-improved-responses.js
+This file appears to be orphaned and no longer used in the current system
+Commenting out to prevent accidental execution
+TODO: Verify this file is not needed and delete if confirmed
+
 /**
  * Test script for improved external review response generation
- * 
+ *
  * This script demonstrates the new human-like response generation system
  * by creating test reviews and generating varied responses.
  */
 
 import { createClient } from '@supabase/supabase-js'
+*/
 import fs from 'fs'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
@@ -209,3 +216,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 }
 
 export { seedTestReviews, compareResponses }
+*/

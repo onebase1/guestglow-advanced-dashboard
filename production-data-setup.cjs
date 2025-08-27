@@ -1,6 +1,12 @@
+/*
+ORPHANED FILE: production-data-setup.cjs
+This file appears to be orphaned and no longer used in the current system
+Commenting out to prevent accidental execution
+TODO: Verify this file is not needed and delete if confirmed
+
 /**
  * Production Data Setup for Client Meeting
- * 
+ *
  * This script:
  * 1. Seeds REAL Eusbett Hotel reviews from the dataset
  * 2. Deletes fake test reviews after real data is loaded
@@ -9,6 +15,7 @@
  */
 
 const { createClient } = require('@supabase/supabase-js')
+*/
 const fs = require('fs')
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://wzfpltamwhkncxjvulik.supabase.co'
@@ -294,3 +301,4 @@ if (require.main === module) {
 }
 
 module.exports = { setupProductionData }
+*/

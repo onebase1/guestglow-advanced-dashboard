@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Send Preview Email</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>📧 Sending Preview Email to g.basera5@gmail.com</h1>
+    <div id="status">Preparing to send...</div>
+    
+    <script>
+        // Initialize Supabase (you'll need to replace with actual credentials)
+        const supabaseUrl = 'https://wzfpltamwhkncxjvulik.supabase.co'
+        const supabaseKey = 'your-anon-key' // Replace with actual key
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+        
+        async function sendPreviewEmail() {
+            const statusDiv = document.getElementById('status')
+            statusDiv.innerHTML = '📧 Sending preview email...'
+            
+            try {
+                // Read the HTML email content
+                const emailResponse = await fetch('./GM-Introduction-Email.html')
+                const emailHTML = await emailResponse.text()
+                
+                // Add preview banner
+                const previewBanner = `
+                    <div style="background: #fbbf24; color: white; padding: 15px; text-align: center; font-weight: bold; margin-bottom: 20px; border-radius: 8px;">
+                        🔍 PREVIEW EMAIL - FOR QUALITY CHECK ONLY
+                        <br><small>This will be sent to: gm@eusbetthotel.com, erbennet@gmail.com after your approval</small>
+                        <br><small>Please review and confirm before sending to Robert and Edward</small>
+                    </div>
+                `
+                
+                const previewHTML = emailHTML.replace(
+                    '<div class="email-container">',
+                    `<div class="email-container">${previewBanner}`
+                )
+                
+                // Send via Supabase Edge Function
+                const { data, error } = await supabase.functions.invoke('send-tenant-emails', {
+                    body: {
+                        email_type: 'gm_introduction_preview',
+                        recipient_email: 'g.basera5@gmail.com',
+                        bcc_emails: ['gizzy@guest-glow.com'],
+                        subject: '[PREVIEW - QUALITY CHECK] GuestGlow Advanced Analytics - System Introduction for Eusbett Hotel',
+                        html_content: previewHTML,
+                        tenant_id: 'eusbett-tenant-id',
+                        tenant_slug: 'eusbett',
+                        priority: 'normal',
+                        custom_note: 'Preview email for quality review before sending to GM and Edward'
+                    }
+                })
+                
+                if (error) {
+                    throw error
+                }
+                
+                statusDiv.innerHTML = `
+                    <div style="color: green; font-weight: bold;">
+                        ✅ Preview email sent successfully!
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <h3>📧 Email Details:</h3>
+                        <p><strong>To:</strong> g.basera5@gmail.com</p>
+                        <p><strong>BCC:</strong> gizzy@guest-glow.com</p>
+                        <p><strong>Subject:</strong> [PREVIEW - QUALITY CHECK] GuestGlow Advanced Analytics - System Introduction for Eusbett Hotel</p>
+                        
+                        <h3>📋 What to Check:</h3>
+                        <ul>
+                            <li>✅ Professional tone and formatting</li>
+                            <li>✅ No financial promises or guarantees</li>
+                            <li>✅ Respectful language about optional features</li>
+                            <li>✅ Industry facts are accurate and verifiable</li>
+                            <li>✅ Email displays correctly on mobile and desktop</li>
+                            <li>✅ All contact details are correct</li>
+                        </ul>
+                        
+                        <h3>🚀 Next Steps:</h3>
+                        <p>1. Check your email at g.basera5@gmail.com</p>
+                        <p>2. Review the content and formatting</p>
+                        <p>3. Let me know if any changes are needed</p>
+                        <p>4. Once approved, I'll send to Robert and Edward</p>
+                        
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                            <h4>📧 Production Email Recipients (After Approval):</h4>
+                            <p><strong>To:</strong> gm@eusbetthotel.com (Robert)</p>
+                            <p><strong>To:</strong> erbennet@gmail.com (Edward)</p>
+                            <p><strong>BCC:</strong> gizzy@guest-glow.com (monitoring)</p>
+                        </div>
+                    </div>
+                `
+                
+            } catch (error) {
+                console.error('Error sending preview email:', error)
+                statusDiv.innerHTML = `
+                    <div style="color: red; font-weight: bold;">
+                        ❌ Failed to send preview email
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Please check the console for more details.</p>
+                        
+                        <h3>📧 Manual Review Option:</h3>
+                        <p>You can manually review the email content in the GM-Introduction-Email.html file.</p>
+                        
+                        <h3>📋 Key Points to Verify:</h3>
+                        <ul>
+                            <li>✅ No specific financial promises (removed £50,000 claims)</li>
+                            <li>✅ Optional features presented diplomatically</li>
+                            <li>✅ Industry facts only (Google rankings, booking behavior)</li>
+                            <li>✅ Respectful tone throughout</li>
+                            <li>✅ Professional presentation</li>
+                        </ul>
+                    </div>
+                `
+            }
+        }
+        
+        // Auto-send on page load
+        window.onload = sendPreviewEmail
+    </script>
+</body>
+</html>

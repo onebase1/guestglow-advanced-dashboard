@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuestGlow Email Sender</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { background: #f9f9f9; padding: 20px; border-radius: 8px; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .email-preview { background: white; border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 5px; max-height: 400px; overflow-y: auto; }
+        .copy-button { background: #28a745; }
+        .copy-button:hover { background: #1e7e34; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 GuestGlow Email Sender</h1>
+        
+        <div class="status info">
+            <h3>📋 Email Status</h3>
+            <p><strong>Recipient:</strong> g.basera5@gmail.com</p>
+            <p><strong>Subject:</strong> [PREVIEW - QUALITY CHECK] GuestGlow Advanced Analytics - System Introduction</p>
+            <p><strong>Status:</strong> <span id="emailStatus">Ready to send</span></p>
+        </div>
+
+        <div class="status info">
+            <h3>🎯 Options Available</h3>
+            <p><strong>Option 1:</strong> Use n8n workflow (requires setup)</p>
+            <p><strong>Option 2:</strong> Copy email content and send manually via Gmail</p>
+            <p><strong>Option 3:</strong> Use EmailJS service (requires API key)</p>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <button onclick="sendViaN8N()" id="n8nButton">📧 Send via n8n Workflow</button>
+            <button onclick="copyEmailContent()" class="copy-button">📋 Copy Email Content</button>
+            <button onclick="openGmail()" style="background: #dc3545;">📮 Open Gmail</button>
+        </div>
+
+        <div class="email-preview">
+            <h3>📧 Email Preview</h3>
+            <div id="emailContent">
+                <div style="background: #fbbf24; color: white; padding: 15px; text-align: center; font-weight: bold; margin-bottom: 20px; border-radius: 8px;">
+                    🔍 PREVIEW EMAIL - FOR QUALITY CHECK ONLY<br>
+                    <small>This will be sent to: gm@eusbetthotel.com, erbennet@gmail.com after your approval</small><br>
+                    <small>Please review content, tone, and formatting before sending to Robert and Edward</small>
+                </div>
+                
+                <div style="text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 10px;">🌟 GuestGlow Advanced Analytics</div>
+                    <div style="color: #6b7280; font-size: 16px;">Intelligent Guest Experience Management System</div>
+                </div>
+
+                <p><strong>Dear Robert and Edward,</strong></p>
+
+                <p>I am excited to introduce you to the <strong>GuestGlow Advanced Analytics System</strong> - a comprehensive platform designed specifically to help Eusbett Hotel achieve measurable rating improvements through data-driven insights.</p>
+
+                <div style="background: linear-gradient(135deg, #fbbf24, #f59e0b); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; font-weight: bold; font-size: 18px;">
+                    🎯 PRIMARY GOAL: 4.0 → 4.5 Stars (0.5 Uplift) in 6 Months<br>
+                    <small>Target: 278 five-star external reviews • 1.55 per day</small>
+                </div>
+
+                <h3>🚀 What This System Will Track & Report</h3>
+
+                <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; background: #f9fafb; margin: 15px 0;">
+                    <strong>⭐ Daily 5-Star Progress</strong><br>
+                    Real-time tracking toward your 4.5-star goal with daily progress reports
+                </div>
+
+                <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; background: #f9fafb; margin: 15px 0;">
+                    <strong>🚨 Recurring Issue Detection</strong><br>
+                    Automatic identification of problems hurting your rating with impact analysis
+                </div>
+
+                <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; background: #f9fafb; margin: 15px 0;">
+                    <strong>📊 Near-Miss Tracking</strong><br>
+                    Monitor 5-star guests who do not review externally - lost opportunities
+                </div>
+
+                <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; background: #f9fafb; margin: 15px 0;">
+                    <strong>⚡ Instant Rating Alerts</strong><br>
+                    Immediate notifications when rating drops are detected
+                </div>
+
+                <h3>🎯 Key Benefits for Eusbett Hotel</h3>
+
+                <ul>
+                    <li><strong>Proactive Problem Solving:</strong> Identify issues before they become rating killers</li>
+                    <li><strong>Data-Driven Decisions:</strong> Know exactly what is working and what is not</li>
+                    <li><strong>Goal Tracking:</strong> Clear visibility on progress toward 4.5-star rating</li>
+                    <li><strong>Search Visibility:</strong> Higher ratings improve Google search ranking and booking platform placement</li>
+                    <li><strong>Guest Trust:</strong> 4.5+ star ratings significantly increase booking conversion rates</li>
+                    <li><strong>Competitive Positioning:</strong> Advanced analytics to stay ahead of local competition</li>
+                </ul>
+
+                <h3>🎯 Optional Enhancement Ideas</h3>
+                <p><em>These are suggestions that could be implemented if they align with your operational preferences:</em></p>
+                
+                <div style="border: 1px dashed #ccc; border-radius: 6px; padding: 15px; background: #f9fafb; margin: 15px 0;">
+                    <strong>🏆 Team Recognition Features (Optional)</strong><br>
+                    <strong>What it could include:</strong> Highlight staff members mentioned positively in reviews<br>
+                    <strong>Implementation:</strong> Only if it fits your management style and team culture<br>
+                    <strong>Benefit:</strong> Some hotels find this motivates staff, but we understand every team is different
+                </div>
+
+                <div style="border: 1px dashed #ccc; border-radius: 6px; padding: 15px; background: #f9fafb; margin: 15px 0;">
+                    <strong>📱 Mobile Notifications (Optional)</strong><br>
+                    <strong>What it could include:</strong> Push notifications for urgent guest issues<br>
+                    <strong>Implementation:</strong> Completely optional - some managers prefer email-only<br>
+                    <strong>Benefit:</strong> Faster response times, but only if it suits your workflow
+                </div>
+
+                <p><em>All optional features can be discussed and implemented only if they add value to your specific operation.</em></p>
+
+                <h3>💡 Why This Matters</h3>
+
+                <p>Most hotels rely on reactive approaches - waiting for problems to appear in reviews. This system gives you <strong>predictive insights</strong> to prevent issues and <strong>optimization tools</strong> to maximize your rating improvement.</p>
+
+                <p><strong>Industry Facts:</strong></p>
+                <ul>
+                    <li>Hotels with 4.5+ star ratings appear higher in Google search results</li>
+                    <li>Booking platforms (Booking.com, Expedia) prioritize higher-rated properties</li>
+                    <li>Guests are 3x more likely to book hotels with 4.5+ stars vs 4.0 stars</li>
+                    <li>Higher ratings reduce dependency on discounting to attract bookings</li>
+                </ul>
+
+                <p>With 278 five-star external reviews needed over 6 months, every optimization matters. This system ensures you do not miss opportunities and can course-correct quickly when needed.</p>
+
+                <p>I am confident this will provide the competitive edge Eusbett Hotel needs to achieve and maintain a 4.5-star rating.</p>
+
+                <p><strong>Looking forward to your feedback and questions!</strong></p>
+
+                <p>Best regards,<br>
+                <strong>Gizzy Basera</strong><br>
+                GuestGlow Advanced Analytics<br>
+                <a href="mailto:g.basera5@gmail.com">g.basera5@gmail.com</a></p>
+
+                <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px; font-size: 12px; color: #6b7280; text-align: center;">
+                    <p>Production email will be sent to: gm@eusbetthotel.com, erbennet@gmail.com</p>
+                    <p>System monitoring: gizzy@guest-glow.com (BCC)</p>
+                    <p>GuestGlow Advanced Analytics • Intelligent Guest Experience Management</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusMessages"></div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessages');
+            const statusClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            statusDiv.innerHTML = `<div class="status ${statusClass}">${message}</div>`;
+            
+            document.getElementById('emailStatus').textContent = message;
+        }
+
+        async function sendViaN8N() {
+            const button = document.getElementById('n8nButton');
+            button.disabled = true;
+            button.textContent = '📧 Sending...';
+            
+            updateStatus('Attempting to send via n8n workflow...', 'info');
+            
+            try {
+                // This would need your actual n8n webhook URL
+                const webhookUrl = 'https://your-n8n-instance.com/webhook/send-email';
+                
+                const emailData = {
+                    recipient_email: 'g.basera5@gmail.com',
+                    subject: '[PREVIEW - QUALITY CHECK] GuestGlow Advanced Analytics - System Introduction for Eusbett Hotel',
+                    html_content: document.getElementById('emailContent').innerHTML,
+                    bcc_emails: ['gizzy@guest-glow.com']
+                };
+                
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(emailData)
+                });
+                
+                if (response.ok) {
+                    updateStatus('✅ Email sent successfully via n8n!', 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+            } catch (error) {
+                updateStatus('❌ n8n webhook failed. Please use manual copy method below.', 'error');
+                console.error('n8n send failed:', error);
+            } finally {
+                button.disabled = false;
+                button.textContent = '📧 Send via n8n Workflow';
+            }
+        }
+
+        function copyEmailContent() {
+            const emailContent = document.getElementById('emailContent').innerHTML;
+            
+            // Create a temporary textarea to copy the HTML
+            const textarea = document.createElement('textarea');
+            textarea.value = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>GuestGlow Advanced Analytics - System Introduction</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    ${emailContent}
+</body>
+</html>`;
+            
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            updateStatus('✅ Email HTML copied to clipboard! You can now paste it into Gmail.', 'success');
+        }
+
+        function openGmail() {
+            const subject = encodeURIComponent('[PREVIEW - QUALITY CHECK] GuestGlow Advanced Analytics - System Introduction for Eusbett Hotel');
+            const body = encodeURIComponent('Please paste the copied HTML content here and send to g.basera5@gmail.com');
+            
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=g.basera5@gmail.com&su=${subject}&body=${body}`;
+            window.open(gmailUrl, '_blank');
+            
+            updateStatus('📮 Gmail opened in new tab. Paste the copied HTML content and send.', 'info');
+        }
+
+        // Initialize
+        updateStatus('Ready to send preview email', 'info');
+    </script>
+</body>
+</html>

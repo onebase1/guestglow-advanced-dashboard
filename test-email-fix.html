@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Email System Fix</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; width: 200px; }
+        .logs { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Email System Fix</h1>
+    <p>Testing the fixed email system with proper sender domains and email types.</p>
+
+    <div class="test-section">
+        <h3>📧 Test Complete Email Flow</h3>
+        <input type="email" id="testEmail" placeholder="Your email address" value="g.basera@yahoo.com">
+        <button onclick="testCompleteFlow()">Test Complete Flow</button>
+        <div id="flowResult" class="result" style="display: none;"></div>
+        <div id="flowLogs" class="logs" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Check Recent Communication Logs</h3>
+        <button onclick="checkRecentLogs()">Check Recent Logs</button>
+        <div id="logsResult" class="result" style="display: none;"></div>
+        <div id="logsData" class="logs" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Initialize Supabase client
+        const supabaseUrl = 'https://wzfpltamwhkncxjvulik.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbmN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjI5MDU3NTksImV4cCI6MjAzODQ4MTc1OX0.VuaN2mmfrN3_d6QyBJWM2P2nlRYqi_pNiWt7zOLdoQs'
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+
+        async function testCompleteFlow() {
+            const resultDiv = document.getElementById('flowResult')
+            const logsDiv = document.getElementById('flowLogs')
+            const testEmail = document.getElementById('testEmail').value
+
+            if (!testEmail) {
+                resultDiv.className = 'result error'
+                resultDiv.textContent = '❌ Please enter an email address'
+                resultDiv.style.display = 'block'
+                return
+            }
+
+            resultDiv.style.display = 'block'
+            logsDiv.style.display = 'block'
+            resultDiv.className = 'result info'
+            resultDiv.textContent = '🔄 Testing complete email flow...'
+            logsDiv.innerHTML = ''
+
+            const logs = []
+
+            try {
+                // Step 1: Submit feedback
+                logs.push('📝 Step 1: Submitting feedback...')
+                logsDiv.innerHTML = logs.join('<br>')
+
+                const { data: feedbackData, error: feedbackError } = await supabase.rpc('insert_feedback_with_tenant', {
+                    p_tenant_slug: 'eusbett',
+                    p_guest_name: 'Test User Fix',
+                    p_guest_email: testEmail,
+                    p_room_number: '999',
+                    p_check_in_date: null,
+                    p_check_out_date: null,
+                    p_rating: 4,
+                    p_feedback_text: 'Testing email system fix - sender domains and email types',
+                    p_issue_category: 'Staff Behavior',
+                    p_would_recommend: true,
+                    p_source: 'email_fix_test'
+                })
+
+                if (feedbackError) throw feedbackError
+
+                logs.push(`✅ Feedback submitted successfully! ID: ${feedbackData}`)
+                logsDiv.innerHTML = logs.join('<br>')
+
+                // Step 2: Trigger email generation
+                logs.push('📧 Step 2: Triggering email generation...')
+                logsDiv.innerHTML = logs.join('<br>')
+
+                const { data: emailData, error: emailError } = await supabase.functions.invoke('generate-feedback-emails', {
+                    body: {
+                        feedback_id: feedbackData,
+                        guest_name: 'Test User Fix',
+                        guest_email: testEmail,
+                        room_number: '999',
+                        rating: 4,
+                        feedback_text: 'Testing email system fix - sender domains and email types',
+                        issue_category: 'Staff Behavior',
+                        check_in_date: null,
+                        tenant_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+                        tenant_slug: 'eusbett'
+                    }
+                })
+
+                if (emailError) throw emailError
+
+                logs.push('✅ Email generation completed!')
+                logs.push(`📊 Results: ${JSON.stringify(emailData, null, 2)}`)
+                logsDiv.innerHTML = logs.join('<br>')
+
+                // Step 3: Check communication logs
+                logs.push('📋 Step 3: Checking communication logs...')
+                logsDiv.innerHTML = logs.join('<br>')
+
+                // Wait a moment for logs to be written
+                await new Promise(resolve => setTimeout(resolve, 2000))
+
+                const { data: commLogs, error: logsError } = await supabase
+                    .from('communication_logs')
+                    .select('*')
+                    .eq('feedback_id', feedbackData)
+                    .order('created_at', { ascending: false })
+
+                if (logsError) throw logsError
+
+                logs.push(`📊 Communication logs found: ${commLogs.length}`)
+                commLogs.forEach((log, index) => {
+                    logs.push(`  ${index + 1}. Type: ${log.email_type || 'NULL'}, To: ${log.recipient_email}, Status: ${log.status}`)
+                })
+
+                logsDiv.innerHTML = logs.join('<br>')
+
+                resultDiv.className = 'result success'
+                resultDiv.textContent = `✅ Test completed! Found ${commLogs.length} email logs. Check logs below for details.`
+
+            } catch (error) {
+                logs.push(`❌ Error: ${error.message}`)
+                logsDiv.innerHTML = logs.join('<br>')
+
+                resultDiv.className = 'result error'
+                resultDiv.textContent = `❌ Test failed: ${error.message}`
+            }
+        }
+
+        async function checkRecentLogs() {
+            const resultDiv = document.getElementById('logsResult')
+            const dataDiv = document.getElementById('logsData')
+
+            resultDiv.style.display = 'block'
+            dataDiv.style.display = 'block'
+            resultDiv.className = 'result info'
+            resultDiv.textContent = '🔄 Checking recent communication logs...'
+
+            try {
+                const { data: logs, error } = await supabase
+                    .from('communication_logs')
+                    .select(`
+                        id,
+                        feedback_id,
+                        email_type,
+                        recipient_email,
+                        sender_email,
+                        subject,
+                        status,
+                        created_at,
+                        feedback:feedback_id (
+                            guest_name,
+                            guest_email,
+                            rating
+                        )
+                    `)
+                    .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()) // Last 2 hours
+                    .order('created_at', { ascending: false })
+                    .limit(20)
+
+                if (error) throw error
+
+                resultDiv.className = 'result success'
+                resultDiv.textContent = `✅ Found ${logs.length} recent email logs`
+
+                const logHtml = logs.map(log => `
+                    <div style="border: 1px solid #ddd; margin: 10px 0; padding: 10px; border-radius: 4px;">
+                        <strong>Email Type:</strong> ${log.email_type || '<span style="color: red;">NULL</span>'}<br>
+                        <strong>To:</strong> ${log.recipient_email}<br>
+                        <strong>From:</strong> ${log.sender_email || 'N/A'}<br>
+                        <strong>Subject:</strong> ${log.subject}<br>
+                        <strong>Status:</strong> ${log.status}<br>
+                        <strong>Created:</strong> ${new Date(log.created_at).toLocaleString()}<br>
+                        <strong>Guest:</strong> ${log.feedback?.guest_name || 'N/A'} (${log.feedback?.rating || 'N/A'}⭐)
+                    </div>
+                `).join('')
+
+                dataDiv.innerHTML = logHtml
+
+            } catch (error) {
+                resultDiv.className = 'result error'
+                resultDiv.textContent = `❌ Failed to check logs: ${error.message}`
+                dataDiv.innerHTML = ''
+            }
+        }
+    </script>
+</body>
+</html>

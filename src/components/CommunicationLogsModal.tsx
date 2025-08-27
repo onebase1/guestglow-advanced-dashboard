@@ -81,8 +81,25 @@ export function CommunicationLogsModal({ feedbackId, guestName, isOpen, onClose 
     }
   };
 
-  const guestEmails = logs.filter(log => log.email_type === 'guest_thank_you');
-  const managerEmails = logs.filter(log => log.email_type === 'manager_alert');
+  // Filter emails by type, handling NULL values by checking recipient patterns
+  const guestEmails = logs.filter(log =>
+    log.email_type === 'guest_thank_you' ||
+    log.email_type === 'guest_confirmation' ||
+    // Handle NULL email_type by checking if recipient is not a system/manager email
+    (!log.email_type && log.recipient_email &&
+     !log.recipient_email.includes('system-fallback') &&
+     !log.recipient_email.includes('@guest-glow.com'))
+  );
+
+  const managerEmails = logs.filter(log =>
+    log.email_type === 'manager_alert' ||
+    log.email_type === 'escalation' ||
+    log.email_type === 'system_notification' ||
+    // Handle NULL email_type by checking if recipient is a system/manager email
+    (!log.email_type && log.recipient_email &&
+     (log.recipient_email.includes('system-fallback') ||
+      log.recipient_email.includes('@guest-glow.com')))
+  );
 
   const renderEmailCard = (log: CommunicationLog) => (
     <Card key={log.id} className="mb-4">
