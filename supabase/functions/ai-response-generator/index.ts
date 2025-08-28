@@ -232,8 +232,8 @@ Structure and Content:
 - First line: "Dear ${params.guestName},"
 
 Opening Paragraph:
-- Express genuine gratitude: "Thank you very much for taking the time to share your feedback regarding your recent experience at ${params.hotelName}"
-- Appreciate their rating naturally (mention once only, not redundantly): "We truly appreciate your ${params.rating}-star rating and your valuable comments"
+- Express genuine gratitude: "Thank you very much for taking the time to share your feedback regarding your recent experience at ${params.hotelName}"  
+- DO NOT mention star rating in opening - save rating reference for natural placement later if needed
 
 Issue Acknowledgment (for ratings ≤3):
 - Specific empathy: Reference the exact issue they mentioned
@@ -254,7 +254,7 @@ Sign-off: "Warm regards,\n${params.hotelName} Team"
 
 Tone: Warm, genuine, detailed, empathetic, and professional
 ALWAYS use "we" not "I" - this is from the Guest Relations Team
-DO NOT mention star rating redundantly in first paragraph if already mentioned
+CRITICAL: DO NOT mention star rating or rating numbers in the first paragraph - focus on gratitude and feedback acknowledgment
 DO NOT mention compensation, goodwill gestures, refunds, or monetary offers
 
 Output: plain text only.`
@@ -293,7 +293,7 @@ function generateTemplateResponse(params: {
   if (params.isExternal) {
     return `Dear ${params.guestName},
 
-Thank you for taking the time to share your ${params.rating}-star review. Your feedback is invaluable to us as we continuously strive to improve our services.
+Thank you for taking the time to share your review with us. Your feedback is invaluable to us as we continuously strive to improve our services.
 
 ${params.rating >= 4 
   ? "We're delighted to hear about your positive experience and hope to continue providing you with excellent service throughout your stay."
@@ -306,7 +306,7 @@ The ${params.hotelName} Management Team`
 
   return `Dear ${params.guestName},
 
-Thank you so much for taking the time to share your feedback about your recent stay with us at ${params.hotelName}. Your ${params.rating}-star rating and detailed comments are incredibly valuable to our team.
+Thank you so much for taking the time to share your feedback about your recent stay with us at ${params.hotelName}. Your detailed comments are incredibly valuable to our team.
 
 ${params.rating >= 4 
   ? `We're absolutely thrilled to hear that you had such a positive experience! It's guests like you who make our work so rewarding, and we're grateful for your kind words.
