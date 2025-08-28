@@ -224,20 +224,38 @@ Feedback: "${params.reviewText}"
 Hotel: ${params.hotelName}
 Issues identified: ${issueAnalysis.join(', ') || 'None'}
 
-Strict format and style:
-- 130–170 words total
-- Exactly 4 short paragraphs, each 1–2 sentences (no more, no less)
-- First line must be: "Dear ${params.guestName},"
-- Paragraph 1: Thank them and reference the ${params.rating}-star rating
-- Paragraph 2: ${params.rating <= 3 ? 'One-sentence apology referencing the key issue(s) succinctly' : 'One-sentence appreciation referencing a specific highlight'}
-- Paragraph 3: 1–2 specific action(s) we are taking (concise, factual), e.g., "we're working with our technical/service team to review and resolve"
-- Paragraph 4: Invite them back and offer to assist directly (do not promise contact; do not imply a specific person will reach out)
-- After paragraph 4, add exactly two lines: "Warm regards," then "${params.hotelName} Team"
-- Tone: warm, sincere, professional, and ${params.brandVoice}
-- ALWAYS use "we" not "I" - this is from the Guest Relations Team
-- Avoid repetition and long sentences; no bullet points; no headings
-- Do NOT say phrases like "we want to make this right", "a member of our team will be in touch", "AI", or anything that reveals automation
-- Do NOT mention compensation, goodwill gestures, refunds, or monetary offers
+Write a warm, detailed, and professional guest relations email response:
+
+Structure and Content:
+- 180-250 words total (generous length for proper warmth)
+- 4-5 natural paragraphs of varying length (no rigid sentence limits)
+- First line: "Dear ${params.guestName},"
+
+Opening Paragraph:
+- Express genuine gratitude: "Thank you very much for taking the time to share your feedback regarding your recent experience at ${params.hotelName}"
+- Appreciate their rating naturally (mention once only, not redundantly): "We truly appreciate your ${params.rating}-star rating and your valuable comments"
+
+Issue Acknowledgment (for ratings ≤3):
+- Specific empathy: Reference the exact issue they mentioned
+- Sincere apology: "Please accept our apologies for any inconvenience this may have caused"
+- Show understanding: "We understand how important [their concern] is for our guests"
+
+Action Paragraph:
+- Detailed explanation of steps being taken
+- Mention specific teams/departments when appropriate
+- Show proactive commitment to resolution
+
+Closing Paragraphs:
+- Reinforce priorities: "Your comfort and satisfaction are our top priorities"
+- Connect feedback to improvement: "your feedback helps us to continually improve our service"
+- Future-focused invitation: "we look forward to welcoming you back" and "make your next stay even better"
+
+Sign-off: "Warm regards,\n${params.hotelName} Team"
+
+Tone: Warm, genuine, detailed, empathetic, and professional
+ALWAYS use "we" not "I" - this is from the Guest Relations Team
+DO NOT mention star rating redundantly in first paragraph if already mentioned
+DO NOT mention compensation, goodwill gestures, refunds, or monetary offers
 
 Output: plain text only.`
 }
