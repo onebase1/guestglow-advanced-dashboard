@@ -49,7 +49,10 @@ export function TenantAuthMiddleware({
   })
 
   useEffect(() => {
-    validateTenantAndAccess()
+    // Prevent unnecessary re-validations for same tenant
+    if (!authLoading && (!validation.tenant || validation.tenant.slug !== tenantSlug)) {
+      validateTenantAndAccess()
+    }
   }, [tenantSlug, user, authLoading])
 
   const validateTenantAndAccess = async () => {
@@ -174,14 +177,14 @@ export function TenantAuthMiddleware({
     }
   }
 
-  // Loading state
+  // Loading state with faster feedback
   if (authLoading || validation.isValidating) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">
-            {authLoading ? 'Verifying authentication...' : 'Validating tenant access...'}
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {authLoading ? 'Checking access...' : 'Loading...'}
           </p>
         </div>
       </div>

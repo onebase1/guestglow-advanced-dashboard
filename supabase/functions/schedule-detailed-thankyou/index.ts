@@ -105,14 +105,13 @@ serve(async (req) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${subject}</title>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #fff; }
-          .header { background: #2c5530; color: white; padding: 20px; text-align: center; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f8f9fa; }
+          .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+          .header { background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%); color: white; padding: 30px 20px; text-align: center; }
+          .header h1 { margin: 0; font-size: 24px; font-weight: 300; }
+          .header p { margin: 5px 0 0 0; opacity: 0.9; font-size: 16px; }
           .content { padding: 30px; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
-          .feedback-summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
-          .rating { color: #ffa500; font-weight: bold; }
-          .highlight { background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 15px 0; }
+          .content > div { font-size: 16px; line-height: 1.8; }
         </style>
       </head>
       <body>
@@ -123,22 +122,17 @@ serve(async (req) => {
           </div>
           
           <div class="content">
-            <div style="white-space: pre-line; font-size: 16px;">
+            <div style="white-space: pre-line;">
               ${thankYouData.response}
             </div>
             
-            <div class="feedback-summary">
-              <h3>Your Feedback Summary</h3>
-              <p><strong>Rating:</strong> <span class="rating">${request.rating}/5 ⭐</span></p>
-              ${request.issue_category ? `<p><strong>Category:</strong> ${request.issue_category}</p>` : ''}
-              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+              <p style="color: #999; font-size: 11px; line-height: 1.4; margin: 0;">
+                This email was sent by GuestGlow (DreamPath Ltd) on behalf of ${hotelName}.<br>
+                If you wish to stop receiving these emails, please contact the hotel directly.<br>
+                DreamPath Ltd, 72 Newholme Estate, TS28 5EN, Wingate, United Kingdom
+              </p>
             </div>
-            
-          </div>
-          
-          <div class="footer">
-            <p>This email was sent from ${hotelName}</p>
-            <p>If you have any questions, please contact us directly.</p>
           </div>
         </div>
       </body>

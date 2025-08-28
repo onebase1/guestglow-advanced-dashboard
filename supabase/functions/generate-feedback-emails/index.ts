@@ -496,25 +496,32 @@ function generateGuestEmailHtml(feedback: FeedbackEmailRequest): string {
   const hotelName = feedback.tenant_slug.charAt(0).toUpperCase() + feedback.tenant_slug.slice(1) + ' Hotel'
   return `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px;">
-      <div style="background: #059669; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="margin: 0; font-size: 24px;">Thank You for Your Feedback</h1>
-        <p style="margin: 10px 0 0 0; font-size: 16px;">${hotelName}</p>
+      <div style="background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 300;">Thank You for Your Feedback</h1>
+        <p style="margin: 5px 0 0 0; font-size: 16px; opacity: 0.9;">${hotelName}</p>
       </div>
 
-      <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
-        <h2 style="color: #333; margin-top: 0;">Dear ${feedback.guest_name},</h2>
+      <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px;">
+        <h2 style="color: #333; margin-top: 0; font-size: 20px; font-weight: 400;">Dear ${feedback.guest_name},</h2>
 
-        <p>Thank you for taking the time to share your feedback with us. This is a quick note to confirm we’ve received it.</p>
+        <p style="font-size: 16px; line-height: 1.7;">Thank you for taking the time to share your feedback with us. We have received your comments and truly value your input.</p>
 
-        <p>Your comments have been passed to our Guest Relations team and are being reviewed so we can continue improving the experience for our guests.</p>
+        <p style="font-size: 16px; line-height: 1.7;">Your feedback helps us continuously improve the experience for all our guests during their stay with us.</p>
 
-        <p>We appreciate your support and look forward to welcoming you again.</p>
-
-        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-          <p style="color: #666; font-size: 14px;">
-            Best regards,<br>
-            <strong>${hotelName} Team</strong>
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+          <p style="color: #666; font-size: 14px; margin: 0;">
+            Warm regards,<br>
+            <strong>Guest Relations Team</strong><br>
+            <span style="font-size: 13px; color: #999;">${hotelName}</span>
           </p>
+          
+          <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+            <p style="color: #999; font-size: 11px; line-height: 1.4; margin: 0;">
+              This email was sent by GuestGlow (DreamPath Ltd) on behalf of ${hotelName}.<br>
+              If you wish to stop receiving feedback confirmations, please contact the hotel directly.<br>
+              DreamPath Ltd, 72 Newholme Estate, TS28 5EN, Wingate, United Kingdom
+            </p>
+          </div>
         </div>
       </div>
     </div>

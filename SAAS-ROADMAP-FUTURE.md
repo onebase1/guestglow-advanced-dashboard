@@ -217,4 +217,88 @@ if (tenant.email_service_type === 'custom') {
 
 ---
 
+## 📧 **Email Domain Strategy & Legal Compliance**
+
+### **Domain Options & Best Practices:**
+
+#### **Option 1: Customer's Own Domain (Most Professional)**
+```
+✅ feedback@eusbetthotel.com
+✅ guestrelations@eusbetthotel.com
+✅ noreply@eusbetthotel.com
+```
+**Pros:** Maximum trust, professional appearance, brand consistency  
+**Cons:** Requires customer to set up email hosting
+
+#### **Option 2: Branded Subdomain (SaaS Best Practice)**
+```
+✅ feedback@eusbett.guestglow.com
+✅ guestrelations@eusbett.guestglow.com  
+✅ noreply@eusbett.guestglow.com
+```
+**Pros:** No customer setup required, still branded, easy to manage  
+**Cons:** Slightly less professional than own domain
+
+#### **Option 3: Generic SaaS Domain (Basic)**
+```
+⚠️ eusbett@guestglow.com
+⚠️ feedback-eusbett@guestglow.com
+```
+**Pros:** Simplest to implement  
+**Cons:** Less professional, potential trust issues
+
+### **Legal & Ethical Requirements:**
+
+#### **✅ What's REQUIRED:**
+1. **CAN-SPAM Compliance**: Must include sender identification
+2. **GDPR/Privacy**: Must be clear who's sending emails
+3. **Truthful Representation**: Can't pretend to be someone else
+4. **Unsubscribe Capability**: Must provide opt-out mechanism
+
+#### **✅ What's PERMITTED:**
+- **Sending on behalf of client** (common SaaS practice)
+- **Using branded subdomains** (widely accepted)
+- **Clear "powered by" disclaimers** (transparent)
+
+#### **❌ What's PROBLEMATIC:**
+- **Impersonating client completely** without disclosure
+- **Using misleading sender names**
+- **No way to contact actual service provider**
+
+### **Recommended Implementation:**
+
+#### **Phase 1 (Current - Testing):**
+- Use `@guest-glow.com` for now
+- Focus on getting system working
+
+#### **Phase 2 (Production):**
+- **Offer both options** in pricing tiers:
+  - **Basic Plan**: `@eusbett.guestglow.com` (we handle everything)
+  - **Pro Plan**: `@eusbetthotel.com` (they provide SMTP, we guide setup)
+
+#### **Phase 3 (SaaS Scale):**
+- **Automated subdomain creation** for new customers
+- **Easy SMTP integration** for customers who want own domain
+- **Clear service attribution** in all emails
+
+### **Technical Implementation:**
+
+```typescript
+// Customer configuration
+const emailConfig = {
+  useCustomDomain: false, // Pro plan feature
+  customDomain: 'eusbetthotel.com',
+  senderName: 'Guest Relations',
+  replyTo: 'guestrelations@eusbetthotel.com',
+  brandedSubdomain: 'eusbett.guestglow.com'
+}
+
+// Email sending logic
+const fromAddress = emailConfig.useCustomDomain 
+  ? `${emailConfig.senderName} <guestrelations@${emailConfig.customDomain}>`
+  : `${emailConfig.senderName} <guestrelations@${emailConfig.brandedSubdomain}>`
+```
+
+---
+
 *Save this roadmap for future reference. Focus on perfecting Eusbett first!*

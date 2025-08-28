@@ -248,7 +248,7 @@ Action Paragraph:
 Closing Paragraphs:
 - Reinforce priorities: "Your comfort and satisfaction are our top priorities"
 - Connect feedback to improvement: "your feedback helps us to continually improve our service"
-- Future-focused invitation: "we look forward to welcoming you back" and "make your next stay even better"
+- Future engagement: "we hope to continue providing you with excellent service" or "please let us know if there's anything else we can do for you"
 
 Sign-off: "Warm regards,\n${params.hotelName} Team"
 
@@ -296,7 +296,7 @@ function generateTemplateResponse(params: {
 Thank you for taking the time to share your ${params.rating}-star review. Your feedback is invaluable to us as we continuously strive to improve our services.
 
 ${params.rating >= 4 
-  ? "We're delighted to hear about your positive experience and look forward to welcoming you back soon."
+  ? "We're delighted to hear about your positive experience and hope to continue providing you with excellent service throughout your stay."
   : "We sincerely apologize that your experience didn't meet expectations. We take all feedback seriously and are committed to making improvements."
 }
 

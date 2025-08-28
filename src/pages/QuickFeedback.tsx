@@ -226,11 +226,7 @@ export default function QuickFeedback() {
         submissionTime
       )
 
-      // Show thank you message
-      toast({
-        title: "Thank you for your feedback!",
-        description: "Your feedback helps us improve our service."
-      })
+      // Skip toast - user will see thank you page immediately
 
       setStep(5) // Thank you step
 
@@ -387,12 +383,8 @@ The ${tenant.name || 'Hotel'} Team`)
       })
       console.log('✅ Feedback submitted successfully, ID:', feedbackId)
 
-      // Show thank you message immediately for better UX
+      // Skip toast - user will see thank you page immediately
       console.log('🎉 Moving to thank you step...')
-      toast({
-        title: "Thank you for your detailed feedback!",
-        description: "We'll review your feedback and work to improve your experience."
-      })
       setStep(5) // Thank you step
       console.log('📍 Current step set to:', 5)
 
@@ -586,8 +578,8 @@ The ${tenant.name || 'Hotel'} Team`)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-card via-muted/20 to-primary/5 p-4">
-      <div className="mx-auto max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-card via-muted/20 to-primary/5 p-4 flex items-center justify-center">
+      <div className="w-full max-w-md">
         <Card className="bg-card border-2 border-gray-300 shadow-2xl backdrop-blur-sm">
           <CardHeader className="text-center pb-4 space-y-4">
             <div className="space-y-3">

@@ -87,36 +87,21 @@ serve(async (req) => {
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; }
           .container { max-width: 600px; margin: 0 auto; background: #fff; }
-          .header { background: #2c5530; color: white; padding: 20px; text-align: center; }
-          .content { padding: 30px; white-space: pre-line; font-size: 16px; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
-          .ai-badge { background: #e8f5e8; color: #2d5a2d; padding: 5px 10px; border-radius: 15px; font-size: 11px; margin-bottom: 15px; display: inline-block; }
-          .feedback-summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
-          .rating { color: #ffa500; font-weight: bold; }
+          .header { background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%); color: white; padding: 30px 20px; text-align: center; }
+          .header h1 { margin: 0; font-size: 24px; font-weight: 300; }
+          .header p { margin: 5px 0 0 0; opacity: 0.9; font-size: 16px; }
+          .content { padding: 30px; white-space: pre-line; font-size: 16px; line-height: 1.8; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Thank You for Your Detailed Feedback</h1>
+            <h1>Thank You for Your Feedback</h1>
             <p>${hotelName}</p>
-            <div class="ai-badge">✨ Personalized with AI</div>
           </div>
           
           <div class="content">
             ${aiData.response}
-          </div>
-          
-          <div class="feedback-summary">
-            <h3>Your Feedback Summary</h3>
-            <p><strong>Rating:</strong> <span class="rating">${request.rating}/5 ⭐</span></p>
-            ${request.issue_category ? `<p><strong>Category:</strong> ${request.issue_category}</p>` : ''}
-            <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-          </div>
-          
-          <div class="footer">
-            <p>This email was sent from ${hotelName}</p>
-            <p>If you have any questions, please contact us directly.</p>
           </div>
         </div>
       </body>
