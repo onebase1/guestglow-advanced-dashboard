@@ -216,7 +216,7 @@ Requirements:
   // Internal guest thank-you email prompt (short, structured)
   const issueAnalysis = analyzeIssues(params.reviewText, params.rating)
 
-  return `Generate a concise, personalized thank-you/apology email for a hotel guest.
+  return `Generate a warm, natural guest relations email response that flows like human-written correspondence.
 
 Guest: ${params.guestName}
 Rating: ${params.rating}/5 stars
@@ -224,40 +224,38 @@ Feedback: "${params.reviewText}"
 Hotel: ${params.hotelName}
 Issues identified: ${issueAnalysis.join(', ') || 'None'}
 
-Write a warm, detailed, and professional guest relations email response:
+EXAMPLE OF EXCELLENT EMAIL STRUCTURE (follow this natural flow):
+Dear Robert,
 
-Structure and Content:
-- 180-250 words total (generous length for proper warmth)
-- 4-5 natural paragraphs of varying length (no rigid sentence limits)
-- First line: "Dear ${params.guestName},"
+Thank you very much for taking the time to share your feedback regarding your recent experience at Eusbett Hotel. We truly appreciate your 4-star rating and your valuable comments.
 
-Opening Paragraph:
-- Express genuine gratitude: "Thank you very much for taking the time to share your feedback regarding your recent experience at ${params.hotelName}"  
-- DO NOT mention star rating in opening - save rating reference for natural placement later if needed
+We are grateful for your honest input about the poor internet connection you experienced this morning. Please accept our apologies for any inconvenience this may have caused during your stay. We understand how important reliable internet access is for our guests, and we are currently working with our technical team to identify and resolve any connectivity issues to prevent this from happening again.
 
-Issue Acknowledgment (for ratings ≤3):
-- Specific empathy: Reference the exact issue they mentioned
-- Sincere apology: "Please accept our apologies for any inconvenience this may have caused"
-- Show understanding: "We understand how important [their concern] is for our guests"
+Your comfort and satisfaction are our top priorities, and your feedback helps us to continually improve our service. We are delighted that you otherwise enjoyed your experience, and we look forward to welcoming you back to Eusbett Hotel in the future. Please let us know if there is anything we can do to make your next stay even better.
 
-Action Paragraph:
-- Detailed explanation of steps being taken
-- Mention specific teams/departments when appropriate
-- Show proactive commitment to resolution
+Warm regards,
+Eusbett Hotel Team
 
-Closing Paragraphs:
-- Reinforce priorities: "Your comfort and satisfaction are our top priorities"
-- Connect feedback to improvement: "your feedback helps us to continually improve our service"
-- Future engagement: "we hope to continue providing you with excellent service" or "please let us know if there's anything else we can do for you"
+WRITE YOUR RESPONSE EXACTLY LIKE THIS EXAMPLE:
+- 3-4 substantial paragraphs (NOT single sentences)
+- Each paragraph should be 2-4 sentences long and flow naturally
+- Conversational, warm tone like the example above
+- 200-280 words total
+- Start with: "Dear ${params.guestName},"
+- First paragraph: Express gratitude for their feedback and time
+- Second paragraph: Address their specific concerns with empathy, apology, and action steps
+- Third paragraph: Reinforce commitment to service excellence and future relationship
+- End with: "Warm regards,\n${params.hotelName} Team"
 
-Sign-off: "Warm regards,\n${params.hotelName} Team"
+CRITICAL REQUIREMENTS:
+- Write in full, natural paragraphs - NOT bullet points or single sentences
+- Use connecting phrases like "We are grateful for...", "Please accept our apologies...", "We understand how..."
+- Make it sound like a human guest relations manager wrote it personally
+- Be specific about their feedback without being repetitive
+- Show genuine care and professionalism
+- NEVER mention compensation, refunds, or monetary offers
 
-Tone: Warm, genuine, detailed, empathetic, and professional
-ALWAYS use "we" not "I" - this is from the Guest Relations Team
-CRITICAL: DO NOT mention star rating or rating numbers in the first paragraph - focus on gratitude and feedback acknowledgment
-DO NOT mention compensation, goodwill gestures, refunds, or monetary offers
-
-Output: plain text only.`
+Output: plain text only, formatted exactly like the example above.`
 }
 
 /**
@@ -306,19 +304,19 @@ The ${params.hotelName} Management Team`
 
   return `Dear ${params.guestName},
 
-Thank you so much for taking the time to share your feedback about your recent stay with us at ${params.hotelName}. Your detailed comments are incredibly valuable to our team.
+Thank you very much for taking the time to share your feedback regarding your recent experience at ${params.hotelName}. Your detailed comments are incredibly valuable to our team, and we appreciate you choosing to share your thoughts with us.
 
 ${params.rating >= 4 
-  ? `We're absolutely thrilled to hear that you had such a positive experience! It's guests like you who make our work so rewarding, and we're grateful for your kind words.
+  ? `We're absolutely thrilled to hear that you had such a positive experience during your stay. It's guests like you who make our work so rewarding, and we're grateful for your kind words about our service. Your feedback motivates our entire team to continue delivering exceptional hospitality.
 
-We hope to have the pleasure of welcoming you back soon for another exceptional stay.`
-  : `We sincerely apologize that your experience didn't meet the high standards we strive for. Your feedback helps us identify areas where we can improve, and we're committed to making the necessary changes.
+Your comfort and satisfaction are our top priorities, and we're delighted that we were able to provide you with a memorable experience. We hope to have the pleasure of welcoming you back soon for another exceptional stay, and we look forward to continuing to exceed your expectations in the future.`
+  : `We sincerely apologize that your experience didn't meet the high standards we consistently strive to maintain at ${params.hotelName}. Please accept our apologies for any inconvenience this may have caused during your stay. We understand how important it is for our guests to have a comfortable and enjoyable experience, and we take full responsibility when we fall short of these expectations.
 
-We would welcome the opportunity to provide you with a much better experience in the future.`
+Your feedback helps us identify specific areas where we can improve our service, and we're committed to making the necessary changes to ensure a much better experience for all our guests. We would welcome the opportunity to provide you with the exceptional service you deserve during a future visit, and we hope you'll give us another chance to demonstrate our commitment to excellence.`
 }
 
 Warm regards,
-The ${params.hotelName} Guest Relations Team`
+The ${params.hotelName} Team`
 }
 
 /**
