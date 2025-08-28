@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { StarRating } from "@/components/ui/star-rating"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
@@ -662,28 +661,209 @@ The ${tenant.name || 'Hotel'} Team`)
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="category" className="text-base font-medium">What area needs improvement?</Label>
-                    <Select value={formData.issueCategory} onValueChange={(value) => setFormData(prev => ({...prev, issueCategory: value}))}>
-                      <SelectTrigger className="h-12 mt-2">
-                        <SelectValue placeholder="Choose category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Room Quality">🛏️ Room Quality</SelectItem>
-                        <SelectItem value="Service">👥 Service</SelectItem>
-                        <SelectItem value="Cleanliness">🧹 Cleanliness</SelectItem>
-                        <SelectItem value="Amenities">🏊 Amenities</SelectItem>
-                        <SelectItem value="Food & Beverage">🍽️ Food & Beverage</SelectItem>
-                        <SelectItem value="Check-in/Check-out">🔑 Check-in/Check-out</SelectItem>
-                        <SelectItem value="Staff Behavior">💼 Staff</SelectItem>
-                        <SelectItem value="Noise">🔊 Noise</SelectItem>
-                        <SelectItem value="Conferences/Meetings">🎤 Conferences/Meetings</SelectItem>
-                        <SelectItem value="Internet">📶 Internet</SelectItem>
-                        <SelectItem value="Spa">💆 Spa</SelectItem>
-                        <SelectItem value="Gym">💪 Gym</SelectItem>
-                        <SelectItem value="Security">🔒 Security</SelectItem>
-                        <SelectItem value="Swimming Pool">🏊 Swimming Pool</SelectItem>
-                        <SelectItem value="Other">📝 Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="mt-3">
+                      <div className="grid grid-cols-3 gap-3">
+                        {/* Row 1 */}
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Room Quality'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Room Quality' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">🛏️</div>
+                          <div className="text-xs font-medium">Room Quality</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Service'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Service' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">👥</div>
+                          <div className="text-xs font-medium">Service</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Cleanliness'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Cleanliness' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">🧹</div>
+                          <div className="text-xs font-medium">Cleanliness</div>
+                        </button>
+                        
+                        {/* Row 2 */}
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Amenities'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Amenities' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">🏊</div>
+                          <div className="text-xs font-medium">Amenities</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Food & Beverage'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Food & Beverage' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">🍽️</div>
+                          <div className="text-xs font-medium">Food & Beverage</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Check-in/Check-out'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Check-in/Check-out' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">🔑</div>
+                          <div className="text-xs font-medium">Check-in</div>
+                        </button>
+                        
+                        {/* Row 3 */}
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Staff Behavior'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Staff Behavior' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">💼</div>
+                          <div className="text-xs font-medium">Staff</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Noise'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Noise' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">🔊</div>
+                          <div className="text-xs font-medium">Noise</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Conferences/Meetings'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Conferences/Meetings' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">🎤</div>
+                          <div className="text-xs font-medium">Conferences</div>
+                        </button>
+                        
+                        {/* Row 4 */}
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Internet'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Internet' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">📶</div>
+                          <div className="text-xs font-medium">Internet</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Spa'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Spa' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">💆</div>
+                          <div className="text-xs font-medium">Spa</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Gym'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Gym' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">💪</div>
+                          <div className="text-xs font-medium">Gym</div>
+                        </button>
+                        
+                        {/* Row 5 */}
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Security'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Security' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">🔒</div>
+                          <div className="text-xs font-medium">Security</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Swimming Pool'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Swimming Pool' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">🏊</div>
+                          <div className="text-xs font-medium">Pool</div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, issueCategory: 'Other'}))}
+                          className={`p-4 border-2 rounded-lg text-center transition-colors ${
+                            formData.issueCategory === 'Other' 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-gray-200 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">📝</div>
+                          <div className="text-xs font-medium">Other</div>
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div>
