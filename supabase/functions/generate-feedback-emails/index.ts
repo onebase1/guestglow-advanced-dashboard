@@ -147,7 +147,7 @@ async function sendManagerNotification(supabase: any, feedback: FeedbackEmailReq
   const subject = `${aiAnalysis.alertType} - Room ${feedback.room_number || 'N/A'} - ${feedback.guest_name} (${feedback.rating}/5 stars)`
   
   // Determine CC emails based on AI analysis
-  const ccEmails = ['g.basera@yahoo.com']
+  const ccEmails = ['g.basera@yahoo.com', 'guestrelations@eusbetthotel.com']
   if (aiAnalysis.requiresGMEscalation) {
     const gmEmail = Deno.env.get('GENERAL_MANAGER_EMAIL') || 'basera@btinternet.com'
     if (!ccEmails.includes(gmEmail)) {
