@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { getTenantBySlug, validateTenantAccess } from '@/utils/tenant'
+import { getTenantBySlug, validateTenantAccess, validateTenantComplete } from '@/utils/tenant'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 
@@ -61,21 +61,12 @@ export function TenantAuthMiddleware({
     try {
       setValidation(prev => ({ ...prev, isValidating: true, error: null }))
 
-      // 🔒 STEP 1: Validate tenant exists
+      // 🚀 OPTIMIZED: Single database call for all validation
       if (!tenantSlug) {
         throw new Error('Tenant slug is required')
       }
 
-      const tenant = await getTenantBySlug(tenantSlug)
-      if (!tenant) {
-        throw new Error(`Tenant '${tenantSlug}' not found`)
-      }
-
-      if (!tenant.is_active) {
-        throw new Error(`Tenant '${tenantSlug}' is not active`)
-      }
-
-      // 🔒 STEP 2: Check authentication requirement
+      // 🔒 STEP 1: Check authentication requirement first
       if (requireAuth && !user) {
         // Redirect to tenant-scoped auth with return URL
         const returnUrl = encodeURIComponent(location.pathname + location.search)
@@ -83,37 +74,29 @@ export function TenantAuthMiddleware({
         return
       }
 
-      // 🔒 STEP 3: Validate user access to tenant (if authenticated)
-      let hasAccess = true
-      if (user && requireAuth) {
-        hasAccess = await validateTenantAccess(tenant.id)
-        
-        // 🚨 PRODUCTION SECURITY: No development overrides
-        if (!hasAccess) {
-          throw new Error(`Access denied to tenant '${tenantSlug}'`)
-        }
+      // 🚀 STEP 2: Single optimized validation call (replaces 4+ database queries)
+      const result = await validateTenantComplete(
+        tenantSlug,
+        user?.id,
+        allowedRoles
+      )
 
-        // 🔒 STEP 4: Validate user roles (if specified)
-        if (allowedRoles.length > 0) {
-          const userRoles = await getUserRolesForTenant(user.id, tenant.id)
-          const hasRequiredRole = allowedRoles.some(role => 
-            userRoles.includes(role)
-          )
-          
-          if (!hasRequiredRole) {
-            throw new Error(`Insufficient permissions for tenant '${tenantSlug}'`)
-          }
-        }
+      if (!result.success || !result.tenantExists) {
+        throw new Error(result.error || `Tenant '${tenantSlug}' not found`)
       }
 
-      // 🔒 STEP 5: Set tenant context in session
-      await setTenantContext(tenant.id, tenantSlug)
+      if (requireAuth && !result.hasAccess) {
+        throw new Error(`Access denied to tenant '${tenantSlug}'`)
+      }
+
+      // 🔒 STEP 3: Set tenant context in session
+      await setTenantContext(result.tenant.id, tenantSlug)
 
       setValidation({
         isValidating: false,
         tenantExists: true,
-        hasAccess,
-        tenant,
+        hasAccess: result.hasAccess,
+        tenant: result.tenant,
         error: null
       })
 

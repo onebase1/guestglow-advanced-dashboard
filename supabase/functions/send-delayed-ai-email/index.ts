@@ -41,8 +41,55 @@ serve(async (req) => {
     // Wait for the specified delay
     const delayMs = (request.delay_minutes || 3) * 60 * 1000
     console.log(`⏳ Waiting ${request.delay_minutes || 3} minutes before sending...`)
-    
+
     await new Promise(resolve => setTimeout(resolve, delayMs))
+
+    // 🚨 PHASE 2: CHECK APPROVAL STATUS BEFORE SENDING
+    console.log('🔍 Checking approval status...')
+    const { data: approvalCheck, error: approvalError } = await supabase
+      .from('response_approvals')
+      .select('status, requires_approval')
+      .eq('feedback_id', request.feedback_id)
+      .eq('tenant_id', request.tenant_id)
+      .single()
+
+    if (approvalCheck?.requires_approval) {
+      if (approvalCheck.status === 'pending') {
+        console.log('⏸️ Response pending approval - not sending email')
+        return new Response(
+          JSON.stringify({
+            success: false,
+            reason: 'pending_approval',
+            message: 'Email not sent - awaiting human approval'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      } else if (approvalCheck.status === 'rejected') {
+        console.log('❌ Response rejected - not sending email')
+        return new Response(
+          JSON.stringify({
+            success: false,
+            reason: 'rejected',
+            message: 'Email not sent - response was rejected'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      } else if (approvalCheck.status === 'expired') {
+        console.log('⏰ Response expired - not sending email')
+        return new Response(
+          JSON.stringify({
+            success: false,
+            reason: 'expired',
+            message: 'Email not sent - approval expired'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      }
+      // If status is 'approved', continue with sending
+      console.log('✅ Response approved - proceeding with email')
+    } else {
+      console.log('✅ No approval required - proceeding with email')
+    }
 
     // Generate structured email content
     console.log('📧 Generating structured detailed email content...')

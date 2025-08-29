@@ -29,6 +29,30 @@ interface ReportData {
   top_categories: Array<{category: string, count: number, avg_rating: number}>
   response_time_avg: number
   resolution_rate: number
+  // 🚀 PHASE 3: External Rating System Data
+  external_rating_progress: {
+    overall_rating: number
+    google_rating?: number
+    booking_rating?: number
+    tripadvisor_rating?: number
+    total_external_reviews: number
+    rating_change: number
+    goal_progress_percentage: number
+    on_track: boolean
+    days_to_goal: number
+    reviews_needed_daily: number
+  }
+  near_miss_analysis: {
+    total_near_misses: number
+    conversion_rate: number
+    potential_lost_reviews: number
+  }
+  recurring_issues: Array<{
+    category: string
+    frequency: number
+    impact_score: number
+    trend: 'increasing' | 'stable' | 'decreasing'
+  }>
 }
 
 serve(async (req) => {
@@ -132,7 +156,7 @@ async function generateReportData(supabase: any, request: ScheduledEmailRequest)
   
   // Calculate metrics
   const totalFeedback = feedback.length
-  const averageRating = totalFeedback > 0 
+  const averageRating = totalFeedback > 0
     ? Math.round((feedback.reduce((sum, f) => sum + f.rating, 0) / totalFeedback) * 100) / 100
     : 0
 
@@ -144,6 +168,15 @@ async function generateReportData(supabase: any, request: ScheduledEmailRequest)
     2: feedback.filter(f => f.rating === 2).length,
     1: feedback.filter(f => f.rating === 1).length
   }
+
+  // 🚀 PHASE 3: Get external rating progress
+  const externalRatingProgress = await getExternalRatingProgress(supabase, tenantId, dateRange)
+
+  // 🚀 PHASE 3: Get near-miss analysis
+  const nearMissAnalysis = await getNearMissAnalysis(supabase, tenantId, dateRange)
+
+  // 🚀 PHASE 3: Get recurring issues analysis
+  const recurringIssues = await getRecurringIssuesAnalysis(supabase, tenantId, dateRange)
 
   // Category analysis
   const categoryStats = {}
@@ -193,7 +226,10 @@ async function generateReportData(supabase: any, request: ScheduledEmailRequest)
     improvement_areas: improvementAreas,
     top_categories: topCategories,
     response_time_avg: responseTimeAvg,
-    resolution_rate: resolutionRate
+    resolution_rate: resolutionRate,
+    external_rating_progress: externalRatingProgress,
+    near_miss_analysis: nearMissAnalysis,
+    recurring_issues: recurringIssues
   }
 }
 
@@ -395,5 +431,141 @@ function getDateRange(reportType: string, customRange?: { start_date: string, en
   return {
     start_date: startDate.toISOString(),
     end_date: now.toISOString()
+  }
+}
+
+// 🚀 PHASE 3: External Rating Progress Analysis
+async function getExternalRatingProgress(supabase: any, tenantId: string, dateRange: any) {
+  try {
+    // Get latest daily progress
+    const { data: latestProgress } = await supabase
+      .from('daily_rating_progress')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('progress_date', { ascending: false })
+      .limit(1)
+      .single()
+
+    // Get rating goal
+    const { data: ratingGoal } = await supabase
+      .from('rating_goals')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('goal_type', 'overall')
+      .single()
+
+    // Calculate days to goal
+    const daysToGoal = ratingGoal ?
+      Math.ceil((new Date(ratingGoal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0
+
+    return {
+      overall_rating: latestProgress?.overall_rating || 0,
+      google_rating: latestProgress?.google_rating,
+      booking_rating: latestProgress?.booking_rating,
+      tripadvisor_rating: latestProgress?.tripadvisor_rating,
+      total_external_reviews: latestProgress?.total_reviews || 0,
+      rating_change: latestProgress?.rating_change || 0,
+      goal_progress_percentage: latestProgress?.goal_progress_percentage || 0,
+      on_track: latestProgress?.on_track || false,
+      days_to_goal: daysToGoal,
+      reviews_needed_daily: ratingGoal?.daily_target || 0
+    }
+  } catch (error) {
+    console.error('Error getting external rating progress:', error)
+    return {
+      overall_rating: 0,
+      total_external_reviews: 0,
+      rating_change: 0,
+      goal_progress_percentage: 0,
+      on_track: false,
+      days_to_goal: 0,
+      reviews_needed_daily: 0
+    }
+  }
+}
+
+// 🚀 PHASE 3: Near-Miss Analysis
+async function getNearMissAnalysis(supabase: any, tenantId: string, dateRange: any) {
+  try {
+    const { data: nearMisses } = await supabase
+      .from('near_miss_tracking')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .gte('created_at', dateRange.start_date)
+      .lte('created_at', dateRange.end_date)
+
+    const totalNearMisses = nearMisses?.length || 0
+    const converted = nearMisses?.filter(nm => nm.conversion_status === 'converted').length || 0
+    const conversionRate = totalNearMisses > 0 ? Math.round((converted / totalNearMisses) * 100) : 0
+
+    return {
+      total_near_misses: totalNearMisses,
+      conversion_rate: conversionRate,
+      potential_lost_reviews: totalNearMisses - converted
+    }
+  } catch (error) {
+    console.error('Error getting near-miss analysis:', error)
+    return {
+      total_near_misses: 0,
+      conversion_rate: 0,
+      potential_lost_reviews: 0
+    }
+  }
+}
+
+// 🚀 PHASE 3: Recurring Issues Analysis
+async function getRecurringIssuesAnalysis(supabase: any, tenantId: string, dateRange: any) {
+  try {
+    const { data: recentFeedback } = await supabase
+      .from('feedback')
+      .select('category, rating, created_at')
+      .eq('tenant_id', tenantId)
+      .lte('rating', 3)
+      .gte('created_at', dateRange.start_date)
+      .lte('created_at', dateRange.end_date)
+
+    const categoryStats = {}
+    recentFeedback?.forEach(f => {
+      if (f.category) {
+        if (!categoryStats[f.category]) {
+          categoryStats[f.category] = { count: 0, totalRating: 0, dates: [] }
+        }
+        categoryStats[f.category].count++
+        categoryStats[f.category].totalRating += f.rating
+        categoryStats[f.category].dates.push(new Date(f.created_at))
+      }
+    })
+
+    const recurringIssues = Object.entries(categoryStats)
+      .filter(([_, stats]: [string, any]) => stats.count >= 2)
+      .map(([category, stats]: [string, any]) => {
+        const avgRating = stats.totalRating / stats.count
+        const impactScore = Math.round((4 - avgRating) * stats.count * 10) / 10
+
+        // Simple trend analysis based on date distribution
+        const sortedDates = stats.dates.sort((a, b) => a.getTime() - b.getTime())
+        const firstHalf = sortedDates.slice(0, Math.floor(sortedDates.length / 2))
+        const secondHalf = sortedDates.slice(Math.floor(sortedDates.length / 2))
+
+        let trend: 'increasing' | 'stable' | 'decreasing' = 'stable'
+        if (secondHalf.length > firstHalf.length) {
+          trend = 'increasing'
+        } else if (firstHalf.length > secondHalf.length) {
+          trend = 'decreasing'
+        }
+
+        return {
+          category,
+          frequency: stats.count,
+          impact_score: impactScore,
+          trend
+        }
+      })
+      .sort((a, b) => b.impact_score - a.impact_score)
+
+    return recurringIssues
+  } catch (error) {
+    console.error('Error getting recurring issues analysis:', error)
+    return []
   }
 }

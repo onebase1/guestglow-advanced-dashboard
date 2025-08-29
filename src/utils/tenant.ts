@@ -264,7 +264,40 @@ export const validateTenantAccess = async (tenantId: string): Promise<boolean> =
   }
 }
 
-// 🔒 ENHANCED TENANT ACCESS VALIDATION WITH ROLE CHECKING
+// 🚀 OPTIMIZED SINGLE-CALL TENANT VALIDATION (PERFORMANCE OPTIMIZED)
+export const validateTenantComplete = async (
+  tenantSlug: string,
+  userId?: string,
+  requiredRoles: string[] = []
+): Promise<{
+  success: boolean;
+  tenantExists: boolean;
+  hasAccess: boolean;
+  tenant?: Tenant;
+  userRoles?: string[];
+  error?: string;
+}> => {
+  try {
+    const { data, error } = await supabase.rpc('validate_tenant_complete', {
+      p_tenant_slug: tenantSlug,
+      p_user_id: userId || null,
+      p_required_roles: requiredRoles
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Tenant validation error:', error);
+    return {
+      success: false,
+      tenantExists: false,
+      hasAccess: false,
+      error: error.message
+    };
+  }
+};
+
+// 🔒 ENHANCED TENANT ACCESS VALIDATION WITH ROLE CHECKING (LEGACY - USE validateTenantComplete INSTEAD)
 export const validateTenantAccessWithRoles = async (
   tenantId: string,
   requiredRoles: string[] = []

@@ -93,13 +93,53 @@ serve(async (req) => {
       platform: request.platform
     })
 
+    // 🚨 PHASE 2: RISK ASSESSMENT FOR HUMAN-IN-LOOP APPROVAL
+    let requiresApproval = false
+    let approvalId = null
+
+    if (!request.isExternal) { // Only assess internal responses for now
+      try {
+        const riskAssessment = await supabase.functions.invoke('assess-response-risk', {
+          body: {
+            feedback_text: feedbackText,
+            rating: request.rating,
+            response_text: response,
+            tenant_id: request.tenant_id,
+            feedback_id: request.feedback_id || null
+          }
+        })
+
+        if (riskAssessment.data?.assessment?.requires_approval) {
+          requiresApproval = true
+
+          // Send approval notification
+          const notificationResult = await supabase.functions.invoke('send-approval-notification', {
+            body: {
+              approval_id: riskAssessment.data.approval_id,
+              tenant_id: request.tenant_id
+            }
+          })
+
+          if (notificationResult.data?.success) {
+            approvalId = riskAssessment.data.approval_id
+          }
+        }
+      } catch (riskError) {
+        console.error('Risk assessment failed (non-critical):', riskError)
+        // Continue with normal flow if risk assessment fails
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         response: response,
         guest_name: guestName,
         rating: request.rating,
-        type: request.isExternal ? 'external_response' : 'guest_thank_you'
+        type: request.isExternal ? 'external_response' : 'guest_thank_you',
+        requires_approval: requiresApproval,
+        approval_id: approvalId,
+        status: requiresApproval ? 'pending_approval' : 'ready_to_send'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
