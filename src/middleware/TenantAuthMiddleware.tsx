@@ -74,7 +74,29 @@ export function TenantAuthMiddleware({
         return
       }
 
-      // 🚀 STEP 2: Single optimized validation call (replaces 4+ database queries)
+      // 🚀 STEP 2: For quick-feedback (no auth required), use simple tenant lookup
+      if (!requireAuth && location.pathname.includes('/quick-feedback')) {
+        console.log('🔍 Quick feedback route - using simple tenant validation')
+
+        // Use the simpler getTenantBySlug function for quick-feedback
+        const { getTenantBySlug } = await import('@/utils/tenant')
+        const tenant = await getTenantBySlug(tenantSlug)
+
+        if (!tenant) {
+          throw new Error(`Tenant '${tenantSlug}' not found`)
+        }
+
+        setValidation({
+          isValidating: false,
+          tenantExists: true,
+          hasAccess: true, // Always allow access for quick-feedback
+          tenant: tenant,
+          error: null
+        })
+        return
+      }
+
+      // 🚀 STEP 3: Full validation for authenticated routes
       const result = await validateTenantComplete(
         tenantSlug,
         user?.id,
@@ -89,8 +111,10 @@ export function TenantAuthMiddleware({
         throw new Error(`Access denied to tenant '${tenantSlug}'`)
       }
 
-      // 🔒 STEP 3: Set tenant context in session
-      await setTenantContext(result.tenant.id, tenantSlug)
+      // 🔒 STEP 4: Set tenant context in session (only for authenticated routes)
+      if (requireAuth) {
+        await setTenantContext(result.tenant.id, tenantSlug)
+      }
 
       setValidation({
         isValidating: false,
@@ -102,7 +126,7 @@ export function TenantAuthMiddleware({
 
     } catch (error: any) {
       console.error('Tenant validation failed:', error)
-      
+
       setValidation({
         isValidating: false,
         tenantExists: false,
