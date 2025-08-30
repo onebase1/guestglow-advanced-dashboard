@@ -136,19 +136,19 @@ serve(async (req) => {
           <p style="color: #1e40af; margin-bottom: 25px;">Your feedback helps us improve our service quality</p>
           
           <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-            <a href="mailto:guestrelations@eusbetthotel.com?subject=Satisfaction Survey - Very Satisfied&body=Feedback ID: ${feedback_id}%0D%0A%0D%0AI am VERY SATISFIED with how my feedback was handled." 
+            <a href="mailto:basera@btinternet.com?subject=Satisfaction Survey - Very Satisfied&body=Feedback ID: ${feedback_id}%0D%0A%0D%0AI am VERY SATISFIED with how my feedback was handled."
                style="display: inline-block; background: #10b981; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500; margin: 5px;">
               😊 Very Satisfied
             </a>
-            <a href="mailto:guestrelations@eusbetthotel.com?subject=Satisfaction Survey - Satisfied&body=Feedback ID: ${feedback_id}%0D%0A%0D%0AI am SATISFIED with how my feedback was handled." 
+            <a href="mailto:basera@btinternet.com?subject=Satisfaction Survey - Satisfied&body=Feedback ID: ${feedback_id}%0D%0A%0D%0AI am SATISFIED with how my feedback was handled."
                style="display: inline-block; background: #3b82f6; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500; margin: 5px;">
               🙂 Satisfied
             </a>
-            <a href="mailto:guestrelations@eusbetthotel.com?subject=Satisfaction Survey - Neutral&body=Feedback ID: ${feedback_id}%0D%0A%0D%0AI am NEUTRAL about how my feedback was handled." 
+            <a href="mailto:basera@btinternet.com?subject=Satisfaction Survey - Neutral&body=Feedback ID: ${feedback_id}%0D%0A%0D%0AI am NEUTRAL about how my feedback was handled."
                style="display: inline-block; background: #f59e0b; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500; margin: 5px;">
               😐 Neutral
             </a>
-            <a href="mailto:guestrelations@eusbetthotel.com?subject=Satisfaction Survey - Dissatisfied&body=Feedback ID: ${feedback_id}%0D%0A%0D%0AI am DISSATISFIED with how my feedback was handled. Here's why:" 
+            <a href="mailto:basera@btinternet.com?subject=Satisfaction Survey - Dissatisfied&body=Feedback ID: ${feedback_id}%0D%0A%0D%0AI am DISSATISFIED with how my feedback was handled. Here's why:"
                style="display: inline-block; background: #ef4444; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500; margin: 5px;">
               😞 Dissatisfied
             </a>
@@ -160,7 +160,7 @@ serve(async (req) => {
           <p style="color: #166534; margin: 0; font-size: 14px;">
             Your satisfaction is our priority. If you have any additional comments or concerns, 
             please don't hesitate to reach out to us directly at 
-            <a href="mailto:guestrelations@eusbetthotel.com" style="color: #166534; font-weight: 500;">guestrelations@eusbetthotel.com</a>
+            <a href="mailto:basera@btinternet.com" style="color: #166534; font-weight: 500;">basera@btinternet.com</a>
           </p>
         </div>
 

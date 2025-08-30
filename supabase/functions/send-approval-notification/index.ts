@@ -86,7 +86,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from: 'GuestGlow Alerts <alerts@guest-glow.com>',
         to: [
-          'guestrelations@eusbetthotel.com',
+          'basera@btinternet.com', // TEMPORARY: Replaced guestrelations@eusbetthotel.com for security testing
           'gizzy@guest-glow.com',
           'g.basera@yahoo.com',
           'gm@eusbetthotels.com',
