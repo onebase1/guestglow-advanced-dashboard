@@ -5,8 +5,9 @@ const CACHE_NAME = 'guestglow-v1'
 const OFFLINE_FEEDBACK_STORE = 'offline-feedback'
 
 // Supabase config for direct RPC replay from Service Worker
-const SUPABASE_URL = 'https://wzfpltamwhkncxjvulik.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbnN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk'
+// Note: These values should be injected at build time from environment variables
+const SUPABASE_URL = self.SUPABASE_URL || 'https://wzfpltamwhkncxjvulik.supabase.co'
+const SUPABASE_ANON_KEY = self.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnBsdGFtd2hrbnN4anZ1bGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NDI5NTksImV4cCI6MjA3MDAxODk1OX0.4m707IwEkfrE-HIJFoP8hUz6VckZTTc_3CgH44f68Hk'
 const SUPABASE_INSERT_RPC = `${SUPABASE_URL}/rest/v1/rpc/insert_feedback_with_tenant`
 
 // Files to cache for offline functionality

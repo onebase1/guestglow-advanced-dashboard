@@ -102,9 +102,9 @@ serve(async (req) => {
 
 async function scrapeWithFirecrawl(url: string): Promise<TripAdvisorData | null> {
   try {
-    const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY') || 'fc-fb4fd5a19b584e7880b5d9c5eb79df30'
+    const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY')
     if (!firecrawlApiKey) {
-      throw new Error('FIRECRAWL_API_KEY not configured')
+      throw new Error('FIRECRAWL_API_KEY environment variable not configured')
     }
 
     console.log('🔥 Using Firecrawl to scrape TripAdvisor...')
