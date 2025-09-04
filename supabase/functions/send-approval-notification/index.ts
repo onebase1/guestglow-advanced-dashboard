@@ -1,32 +1,34 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 interface ApprovalNotificationRequest {
-  approval_id: string
-  tenant_id: string
+  approval_id: string;
+  tenant_id: string;
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
 
-    const { approval_id, tenant_id }: ApprovalNotificationRequest = await req.json()
+    const { approval_id, tenant_id }: ApprovalNotificationRequest = await req
+      .json();
 
     // Get approval details with feedback information
     const { data: approval, error: approvalError } = await supabase
-      .from('response_approvals')
+      .from("response_approvals")
       .select(`
         *,
         feedback:feedback_id (
@@ -38,101 +40,111 @@ serve(async (req) => {
           comment
         )
       `)
-      .eq('id', approval_id)
-      .single()
+      .eq("id", approval_id)
+      .single();
 
     if (approvalError || !approval) {
-      throw new Error('Approval not found')
+      throw new Error("Approval not found");
     }
 
     // Generate secure approval tokens
     const { data: approveToken, error: approveError } = await supabase
-      .from('approval_tokens')
+      .from("approval_tokens")
       .insert({
         approval_id,
-        action: 'approve'
+        action: "approve",
       })
-      .select('token')
-      .single()
+      .select("token")
+      .single();
 
     const { data: rejectToken, error: rejectError } = await supabase
-      .from('approval_tokens')
+      .from("approval_tokens")
       .insert({
         approval_id,
-        action: 'reject'
+        action: "reject",
       })
-      .select('token')
-      .single()
+      .select("token")
+      .single();
 
     if (approveError || rejectError || !approveToken || !rejectToken) {
-      throw new Error('Failed to generate approval tokens')
+      throw new Error("Failed to generate approval tokens");
     }
 
     // Generate approval links
-    const baseUrl = Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '') || 'https://your-project.supabase.co'
-    const approveLink = `${baseUrl}/functions/v1/process-approval-action?token=${approveToken.token}&action=approve`
-    const rejectLink = `${baseUrl}/functions/v1/process-approval-action?token=${rejectToken.token}&action=reject`
+    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace("/rest/v1", "") ||
+      "https://your-project.supabase.co";
+    const approveLink =
+      `${baseUrl}/functions/v1/process-approval-action?token=${approveToken.token}&action=approve`;
+    const rejectLink =
+      `${baseUrl}/functions/v1/process-approval-action?token=${rejectToken.token}&action=reject`;
 
     // Generate email content
-    const emailContent = generateApprovalEmail(approval, approveLink, rejectLink)
+    const emailContent = generateApprovalEmail(
+      approval,
+      approveLink,
+      rejectLink,
+    );
 
     // Send notification email
-    const emailResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+    const emailResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: 'GuestGlow Alerts <alerts@guest-glow.com>',
+        from: "GuestGlow Alerts <alerts@guest-glow.com>",
         to: [
-          'basera@btinternet.com', // TEMPORARY: Replaced guestrelations@eusbetthotel.com for security testing
-          'gizzy@guest-glow.com',
-          'g.basera@yahoo.com',
-          'gm@eusbetthotels.com',
-          'erbennett@gmail.com'
+          "basera@btinternet.com",
         ],
-        subject: `🚨 HIGH RISK Response Requires Approval - ${approval.risk_factors.join(', ')}`,
-        html: emailContent
-      })
-    })
+        subject: `🚨 HIGH RISK Response Requires Approval - ${
+          approval.risk_factors.join(", ")
+        }`,
+        html: emailContent,
+      }),
+    });
 
     if (!emailResponse.ok) {
-      const errorText = await emailResponse.text()
-      throw new Error(`Email sending failed: ${errorText}`)
+      const errorText = await emailResponse.text();
+      throw new Error(`Email sending failed: ${errorText}`);
     }
 
-    const emailResult = await emailResponse.json()
+    const emailResult = await emailResponse.json();
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         email_id: emailResult.id,
         approve_token: approveToken.token,
-        reject_token: rejectToken.token
+        reject_token: rejectToken.token,
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    )
-
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
   } catch (error) {
-    console.error('Approval notification error:', error)
+    console.error("Approval notification error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    )
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
-})
+});
 
-function generateApprovalEmail(approval: any, approveLink: string, rejectLink: string): string {
-  const feedback = approval.feedback
-  const riskFactorsList = approval.risk_factors.map((factor: string) => `<li style="color: #7f1d1d;">${factor}</li>`).join('')
-  
+function generateApprovalEmail(
+  approval: any,
+  approveLink: string,
+  rejectLink: string,
+): string {
+  const feedback = approval.feedback;
+  const riskFactorsList = approval.risk_factors.map((factor: string) =>
+    `<li style="color: #7f1d1d;">${factor}</li>`
+  ).join("");
+
   return `
     <div style="max-width: 600px; font-family: Arial, sans-serif;">
         
@@ -156,17 +168,25 @@ function generateApprovalEmail(approval: any, approveLink: string, rejectLink: s
         <!-- Risk Assessment -->
         <div style="background: #f9f9f9; padding: 15px;">
             <p><strong>Risk Score:</strong> ${approval.risk_score || 0}/100</p>
-            <p><strong>AI Confidence:</strong> ${Math.round((approval.ai_confidence_score || 0) * 100)}%</p>
+            <p><strong>AI Confidence:</strong> ${
+    Math.round((approval.ai_confidence_score || 0) * 100)
+  }%</p>
             <p><strong>Severity:</strong> ${approval.severity_level}</p>
-            <p><strong>Categories:</strong> ${approval.risk_factors.join(', ')}</p>
+            <p><strong>Categories:</strong> ${
+    approval.risk_factors.join(", ")
+  }</p>
         </div>
         
         <!-- Original Feedback -->
         <div style="margin: 20px 0;">
             <h3>📝 Original Guest Feedback:</h3>
             <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; border-left: 4px solid #6b7280;">
-                <p><strong>Guest:</strong> ${feedback?.guest_name || 'Anonymous'} | <strong>Room:</strong> ${feedback?.room_number || 'N/A'} | <strong>Rating:</strong> ${feedback?.rating || 'N/A'}/5</p>
-                <p>${feedback?.comment || 'No comment provided'}</p>
+                <p><strong>Guest:</strong> ${
+    feedback?.guest_name || "Anonymous"
+  } | <strong>Room:</strong> ${
+    feedback?.room_number || "N/A"
+  } | <strong>Rating:</strong> ${feedback?.rating || "N/A"}/5</p>
+                <p>${feedback?.comment || "No comment provided"}</p>
             </div>
         </div>
         
@@ -198,10 +218,12 @@ function generateApprovalEmail(approval: any, approveLink: string, rejectLink: s
         <!-- Footer -->
         <div style="background: #f3f4f6; padding: 15px; border-radius: 0 0 8px 8px; color: #6b7280; font-size: 12px;">
             <p><strong>⏰ Expires:</strong> 24 hours from now</p>
-            <p><strong>📧 Feedback ID:</strong> ${feedback?.id || approval.feedback_id}</p>
+            <p><strong>📧 Feedback ID:</strong> ${
+    feedback?.id || approval.feedback_id
+  }</p>
             <p>If no action is taken within 24 hours, no response will be sent to the guest.</p>
         </div>
         
     </div>
-  `
+  `;
 }

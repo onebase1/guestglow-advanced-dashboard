@@ -8,6 +8,9 @@ import { useToast } from "@/hooks/use-toast"
 import { GuestResponseModal } from "./GuestResponseModal"
 import { MessageCircle, CheckCircle, Mail } from "lucide-react"
 import { CommunicationLogsModal } from "./CommunicationLogsModal"
+import FeedbackDetailsPanel from "./FeedbackDetailsPanel"
+import { useEffect } from "react"
+import { getCommunicationSummary } from "@/utils/communication"
 
 interface RecentFeedback {
   id: string
@@ -39,7 +42,27 @@ export function RecentFeedbackTab({ recentFeedback, onStatusUpdate }: RecentFeed
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
   const [selectedFeedback, setSelectedFeedback] = useState<RecentFeedback | null>(null)
   const [responseModalOpen, setResponseModalOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [communicationLogsOpen, setCommunicationLogsOpen] = useState(false)
+  // Cache of communication summaries to avoid N requests on every render
+  const [emailSummaries, setEmailSummaries] = useState<Record<string, {count:number; last?: string|null}>>({})
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadSummaries() {
+      const ids = recentFeedback.map(f => f.id)
+      const results = await Promise.all(ids.map(id => getCommunicationSummary(id)))
+      if (cancelled) return
+      const map: Record<string, {count:number; last?: string|null}> = {}
+      ids.forEach((id, i) => {
+        map[id] = { count: results[i].count, last: results[i].lastSubject }
+      })
+      setEmailSummaries(map)
+    }
+    loadSummaries()
+    return () => { cancelled = true }
+  }, [recentFeedback])
+
   const [selectedFeedbackForLogs, setSelectedFeedbackForLogs] = useState<RecentFeedback | null>(null)
   const [widenComments, setWidenComments] = useState(false)
   const { toast } = useToast()
@@ -142,6 +165,11 @@ export function RecentFeedbackTab({ recentFeedback, onStatusUpdate }: RecentFeed
     setCommunicationLogsOpen(true)
   }
 
+  const openDetails = (feedback: RecentFeedback) => {
+    setSelectedFeedback(feedback)
+    setDetailsOpen(true)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -189,12 +217,16 @@ export function RecentFeedbackTab({ recentFeedback, onStatusUpdate }: RecentFeed
                 </div>
                 {/* Emails */}
                 <div className="flex items-center">
-                  <Button size="icon" variant="ghost" onClick={() => openCommunicationLogs(feedback)} className="h-8 w-8" title="View email history">
-                    <Mail className="h-4 w-4" />
+                  <Button size="icon" variant="ghost" onClick={() => openCommunicationLogs(feedback)} className="h-8 w-8" title={emailSummaries[feedback.id]?.last ? `Last: ${emailSummaries[feedback.id]?.last}` : 'View email history'}>
+                    <div className="relative">
+                      <Mail className="h-4 w-4" />
+                      <span className="absolute -top-1 -right-1 text-[10px] bg-slate-200 dark:bg-slate-700 rounded px-1 leading-none">{emailSummaries[feedback.id]?.count ?? 0}</span>
+                    </div>
                   </Button>
                 </div>
                 {/* Actions */}
                 <div className="flex justify-end items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => openDetails(feedback)}>Details</Button>
                   <Button
                     size="sm"
                     onClick={() => updateFeedbackStatus(feedback.id, 'RESOLVED')}
@@ -204,11 +236,17 @@ export function RecentFeedbackTab({ recentFeedback, onStatusUpdate }: RecentFeed
                   >
                     Resolve
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => openResponseModal(feedback)}>Reply</Button>
                 </div>
               </div>
             ))}
           </div>
         </div>
+      {/* Side Panel */}
+      {selectedFeedback && (
+        <FeedbackDetailsPanel isOpen={detailsOpen} onClose={() => setDetailsOpen(false)} feedback={selectedFeedback} />
+      )}
+
       </CardContent>
 
       {/* Modals */}

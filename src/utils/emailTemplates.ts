@@ -1,88 +1,99 @@
 /**
  * 📧 Email Templates System
- * 
+ *
  * Centralized email template management for all GuestGlow communications
  */
 
 export interface EmailTemplateData {
   // Common fields
-  tenant_name?: string
-  tenant_slug?: string
-  guest_name?: string
-  guest_email?: string
-  
+  tenant_name?: string;
+  tenant_slug?: string;
+  guest_name?: string;
+  guest_email?: string;
+
   // Feedback specific
-  feedback_id?: string
-  room_number?: string
-  rating?: number
-  feedback_text?: string
-  issue_category?: string
-  manager_name?: string
-  manager_department?: string
-  
+  feedback_id?: string;
+  room_number?: string;
+  rating?: number;
+  feedback_text?: string;
+  issue_category?: string;
+  manager_name?: string;
+  manager_department?: string;
+
   // Report specific
-  report_date?: string
-  total_feedback?: number
-  average_rating?: number
-  five_star_count?: number
-  improvement_areas?: string[]
-  
+  report_date?: string;
+  total_feedback?: number;
+  average_rating?: number;
+  five_star_count?: number;
+  improvement_areas?: string[];
+
   // System specific
-  action_required?: string
-  urgency_level?: 'low' | 'normal' | 'high' | 'urgent'
-  custom_message?: string
+  action_required?: string;
+  urgency_level?: "low" | "normal" | "high" | "urgent";
+  custom_message?: string;
 }
 
 export interface EmailTemplate {
-  subject: string
-  html: string
-  text?: string
+  subject: string;
+  html: string;
+  text?: string;
 }
 
 /**
  * Generate email template based on type and data
  */
 export function generateEmailTemplate(
-  templateType: string, 
-  data: EmailTemplateData
+  templateType: string,
+  data: EmailTemplateData,
 ): EmailTemplate {
   const templates = {
     // Manager notifications
     manager_alert: generateManagerAlertTemplate,
     escalation_alert: generateEscalationTemplate,
-    
+
     // Guest communications
     guest_confirmation: generateGuestConfirmationTemplate,
     satisfaction_followup: generateSatisfactionFollowupTemplate,
     feedback_link: generateFeedbackLinkTemplate,
-    
+
     // Reports and analytics
     gm_introduction: generateGMIntroductionTemplate,
     daily_report: generateDailyReportTemplate,
     weekly_report: generateWeeklyReportTemplate,
-    
+
     // System notifications
     system_notification: generateSystemNotificationTemplate,
-    tenant_welcome: generateTenantWelcomeTemplate
-  }
+    tenant_welcome: generateTenantWelcomeTemplate,
+  };
 
-  const templateGenerator = templates[templateType]
+  const templateGenerator = templates[templateType];
   if (!templateGenerator) {
-    throw new Error(`Unknown email template type: ${templateType}`)
+    throw new Error(`Unknown email template type: ${templateType}`);
   }
 
-  return templateGenerator(data)
+  return templateGenerator(data);
 }
 
 /**
  * Manager Alert Template
  */
 function generateManagerAlertTemplate(data: EmailTemplateData): EmailTemplate {
-  const urgencyColor = data.rating <= 2 ? '#dc2626' : data.rating <= 3 ? '#f59e0b' : '#059669'
-  const urgencyText = data.rating <= 2 ? 'URGENT' : data.rating <= 3 ? 'ATTENTION NEEDED' : 'FEEDBACK RECEIVED'
+  const urgencyColor = data.rating <= 2
+    ? "#dc2626"
+    : data.rating <= 3
+    ? "#f59e0b"
+    : "#059669";
+  const urgencyText = data.rating <= 2
+    ? "URGENT"
+    : data.rating <= 3
+    ? "ATTENTION NEEDED"
+    : "FEEDBACK RECEIVED";
 
   return {
-    subject: `🔔 ${urgencyText}: ${data.rating}⭐ Feedback - ${data.issue_category} - Room ${data.room_number || 'N/A'}`,
+    subject:
+      `🔔 ${urgencyText}: ${data.rating}⭐ Feedback - ${data.issue_category} - Room ${
+        data.room_number || "N/A"
+      }`,
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px;">
         <div style="background: ${urgencyColor}; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
@@ -91,12 +102,14 @@ function generateManagerAlertTemplate(data: EmailTemplateData): EmailTemplate {
         </div>
         
         <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
-          <h2 style="color: #333; margin-top: 0;">Dear ${data.manager_name || 'Manager'},</h2>
+          <h2 style="color: #333; margin-top: 0;">Dear ${
+      data.manager_name || "Manager"
+    },</h2>
           
           <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
             <h3 style="color: #333; margin-top: 0;">Feedback Details</h3>
             <p><strong>Guest:</strong> ${data.guest_name}</p>
-            <p><strong>Room:</strong> ${data.room_number || 'Not provided'}</p>
+            <p><strong>Room:</strong> ${data.room_number || "Not provided"}</p>
             <p><strong>Rating:</strong> ${data.rating}/5 ⭐</p>
             <p><strong>Category:</strong> ${data.issue_category}</p>
             <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
@@ -111,22 +124,33 @@ function generateManagerAlertTemplate(data: EmailTemplateData): EmailTemplate {
           
           <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; margin: 15px 0;">
             <h3 style="color: #0277bd; margin-top: 0;">Action Required</h3>
-            <p>${data.action_required || `Please review this feedback and take appropriate action. ${data.rating <= 2 ? 'This is a low rating that requires immediate attention.' : 'Please follow up with the guest if needed.'}`}</p>
+            <p>${
+      data.action_required ||
+      `Please review this feedback and take appropriate action. ${
+        data.rating <= 2
+          ? "This is a low rating that requires immediate attention."
+          : "Please follow up with the guest if needed."
+      }`
+    }</p>
           </div>
           
-          ${getEmailFooter('GuestGlow Feedback System', data.feedback_id)}
+          ${getEmailFooter("GuestGlow Feedback System", data.feedback_id)}
         </div>
       </div>
-    `
-  }
+    `,
+  };
 }
 
 /**
  * Guest Confirmation Template
  */
-function generateGuestConfirmationTemplate(data: EmailTemplateData): EmailTemplate {
-  const hotelName = (data.tenant_name || data.tenant_slug?.charAt(0).toUpperCase() + data.tenant_slug?.slice(1)) + ' Hotel'
-  
+function generateGuestConfirmationTemplate(
+  data: EmailTemplateData,
+): EmailTemplate {
+  const hotelName = (data.tenant_name ||
+    data.tenant_slug?.charAt(0).toUpperCase() + data.tenant_slug?.slice(1)) +
+    " Hotel";
+
   return {
     subject: `Thank you for your feedback - ${hotelName}`,
     html: `
@@ -150,40 +174,58 @@ function generateGuestConfirmationTemplate(data: EmailTemplateData): EmailTempla
           
           <p>Your feedback has been forwarded to our ${data.issue_category} team, and we will review it carefully to improve our services.</p>
           
-          ${data.rating <= 3 ? `
+          ${
+      data.rating <= 3
+        ? `
           <div style="background: #fef3c7; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #f59e0b;">
             <p style="margin: 0;"><strong>We want to make this right.</strong> A member of our team will be in touch with you soon to address your concerns and ensure your satisfaction.</p>
           </div>
-          ` : ''}
+          `
+        : ""
+    }
           
           ${getEmailFooter(`The ${hotelName} Guest Relations Team`)}
         </div>
       </div>
-    `
-  }
+    `,
+  };
 }
 
 /**
  * GM Introduction Template
  */
-function generateGMIntroductionTemplate(data: EmailTemplateData): EmailTemplate {
-  const isPreview = data.custom_message?.includes('PREVIEW')
-  
+function generateGMIntroductionTemplate(
+  data: EmailTemplateData,
+): EmailTemplate {
+  const isPreview = data.custom_message?.includes("PREVIEW");
+
   return {
-    subject: isPreview 
+    subject: isPreview
       ? `🧪 [PREVIEW TEST] GuestGlow Advanced Analytics - System Introduction`
-      : `🎉 GuestGlow Advanced Analytics - Your New Guest Experience Intelligence System`,
+      : `🎉 ${
+        data.tenant_name || (data.tenant_slug
+          ? (data.tenant_slug.charAt(0).toUpperCase() +
+            data.tenant_slug.slice(1) + " Hotel")
+          : "GuestGlow Client")
+      } — Advanced Analytics: Your New Guest Experience Intelligence System`,
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px;">
-        <div style="background: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-          <h1 style="margin: 0; font-size: 24px;">🎉 GuestGlow Advanced Analytics</h1>
-          <p style="margin: 10px 0 0 0; font-size: 16px;">Your New Guest Experience Intelligence System</p>
+        <div style="background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%); color: #ffffff; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: 600;">🏨 Welcome to GuestGlow</h1>
+          <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.95;">Advanced Guest Experience Management Platform</p>
+          <div style="margin-top: 10px; display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+            <span style="background: rgba(255,255,255,0.2); padding: 6px 10px; border-radius: 14px; font-size: 12px; color:#ffffff;">🎯 4.5⭐ Rating Goal</span>
+            <span style="background: rgba(255,255,255,0.2); padding: 6px 10px; border-radius: 14px; font-size: 12px; color:#ffffff;">🛡️ AI Security Detection</span>
+            <span style="background: rgba(255,255,255,0.2); padding: 6px 10px; border-radius: 14px; font-size: 12px; color:#ffffff;">📊 Real-time Analytics</span>
+          </div>
         </div>
         
         <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
-          <h2 style="color: #333; margin-top: 0;">Dear Robert & Edward,</h2>
-          
-          ${isPreview ? '<p>🚀 <strong>PREVIEW EMAIL - SYSTEM TEST</strong></p>' : ''}
+          <h2 style="color: #333; margin-top: 0;">Dear Robert,</h2>
+          <p style=\"color: #ffffff; margin: 0;\">GuestGlow invisible marker: evaluation copy</p>
+          ${
+      isPreview ? "<p>🚀 <strong>PREVIEW EMAIL - SYSTEM TEST</strong></p>" : ""
+    }
           
           <p>We're excited to introduce you to GuestGlow Advanced Analytics - your comprehensive guest experience management system that's now live and ready to help you achieve your 4.5-star rating goal!</p>
           
@@ -197,32 +239,76 @@ function generateGMIntroductionTemplate(data: EmailTemplateData): EmailTemplate 
               <li>✅ SLA monitoring and escalation</li>
             </ul>
           </div>
-          
-          <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; margin: 15px 0;">
-            <h3 style="color: #0277bd; margin-top: 0;">📊 What You'll Receive</h3>
-            <p>Starting immediately, you'll receive automated reports including:</p>
+
+          <div style="background: #fff7ed; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #f97316;">
+            <h3 style="color: #9a3412; margin-top: 0;">🛡️ Security & Human-in-the-Loop</h3>
             <ul>
-              <li>Daily feedback summaries</li>
-              <li>Weekly performance analytics</li>
-              <li>Monthly trend analysis</li>
-              <li>Real-time alerts for urgent issues</li>
+              <li>🔒 AI-powered detection for high-risk content (violence, theft, health hazards)</li>
+              <li>⛔ Automatic block on automated replies for sensitive cases</li>
+              <li>👤 Human review required before any guest response is sent</li>
+              <li>📨 Immediate notifications to security contacts for critical incidents</li>
             </ul>
+            <p style="margin: 8px 0 0; font-size: 13px; color: #555;">This protects the hotel and guests while keeping your team in full control.</p>
           </div>
-          
-          ${isPreview ? `
+
+          <div style="background: #e0f2fe; padding: 15px; border-radius: 6px; margin: 15px 0;">
+            <h3 style="color: #0277bd; margin-top: 0;">📊 What You'll Receive (Version 1)</h3>
+            <ul>
+              <li>Daily morning briefing at 8:00 with real data</li>
+              <li>Weekly performance pulse on Mondays at 9:00</li>
+              <li>Real-time urgent alerts (rating drop and critical issues)</li>
+              <li>TripAdvisor tracking with automatic freshness checks</li>
+            </ul>
+            <p style="margin: 10px 0 0; font-size: 13px; color: #555;">All reporting uses live data. No placeholders or hardcoded examples.</p>
+            <p style="margin: 6px 0 0; font-size: 13px; color: #555;"><strong>6‑Month Goal:</strong> Raise to 4.5⭐. Target uplift: <strong>+298 five‑star reviews</strong> (~2/day). Progress and pacing are tracked in your reports.</p>
+          </div>
+
+            <h3 style="color: #0277bd; margin-top: 0;">📊 What You'll Receive (Version 1)</h3>
+            <ul>
+              <li>Daily morning briefing at 8:00 with real data</li>
+              <li>Weekly performance pulse on Mondays at 9:00</li>
+              <li>Real-time urgent alerts (rating drop and critical issues)</li>
+              <li>TripAdvisor tracking with automatic freshness checks</li>
+            </ul>
+            <p style="margin: 10px 0 0; font-size: 13px; color: #555;">All reporting uses live data. No placeholders or hardcoded examples.</p>
+          </div>
+
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin: 15px 0;">
+            <h3 style="color: #111827; margin-top: 0;">🛠️ Version 2 (Optional Enhancements)</h3>
+            <ul>
+              <li>Department scorecards with live targets</li>
+              <li>Staff recognition summaries from guest mentions</li>
+              <li>Mobile notifications for managers</li>
+              <li>Predictive attention items based on trends</li>
+            </ul>
+            <p style="margin: 10px 0 0; font-size: 13px; color: #555;">These are optional upgrades for future scope discussions.</p>
+          </div>
+
+          ${
+      isPreview
+        ? `
           <div style="text-align: center; margin: 30px 0;">
             <p style="background: #fef3c7; padding: 15px; border-radius: 6px; border-left: 4px solid #f59e0b;">
               <strong>🧪 This is a test email to verify the system is working correctly.</strong><br>
               If you receive this, the email system is ready for production!
             </p>
           </div>
-          ` : ''}
-          
-          ${getEmailFooter('The GuestGlow Team', `System ${isPreview ? 'Test' : 'Launch'} - ${new Date().toLocaleString()}`)}
+          `
+        : ""
+    }
+
+          ${
+      getEmailFooter(
+        "The GuestGlow Team",
+        `System ${isPreview ? "Test" : "Launch"} - ${
+          new Date().toLocaleString()
+        }`,
+      )
+    }
         </div>
       </div>
-    `
-  }
+    `,
+  };
 }
 
 /**
@@ -243,73 +329,93 @@ function generateDailyReportTemplate(data: EmailTemplateData): EmailTemplate {
           
           <div style="display: flex; gap: 15px; margin: 20px 0;">
             <div style="background: white; padding: 15px; border-radius: 6px; flex: 1; text-align: center;">
-              <h3 style="color: #2563eb; margin: 0; font-size: 24px;">${data.total_feedback || 0}</h3>
+              <h3 style="color: #2563eb; margin: 0; font-size: 24px;">${
+      data.total_feedback || 0
+    }</h3>
               <p style="margin: 5px 0 0 0; color: #666;">Total Feedback</p>
             </div>
             <div style="background: white; padding: 15px; border-radius: 6px; flex: 1; text-align: center;">
-              <h3 style="color: #059669; margin: 0; font-size: 24px;">${data.average_rating || 0}</h3>
+              <h3 style="color: #059669; margin: 0; font-size: 24px;">${
+      data.average_rating || 0
+    }</h3>
               <p style="margin: 5px 0 0 0; color: #666;">Average Rating</p>
             </div>
             <div style="background: white; padding: 15px; border-radius: 6px; flex: 1; text-align: center;">
-              <h3 style="color: #f59e0b; margin: 0; font-size: 24px;">${data.five_star_count || 0}</h3>
+              <h3 style="color: #f59e0b; margin: 0; font-size: 24px;">${
+      data.five_star_count || 0
+    }</h3>
               <p style="margin: 5px 0 0 0; color: #666;">5-Star Reviews</p>
             </div>
           </div>
           
-          ${data.improvement_areas && data.improvement_areas.length > 0 ? `
+          ${
+      data.improvement_areas && data.improvement_areas.length > 0
+        ? `
           <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
             <h3 style="color: #333; margin-top: 0;">🎯 Areas for Improvement</h3>
             <ul>
-              ${data.improvement_areas.map(area => `<li>${area}</li>`).join('')}
+              ${
+          data.improvement_areas.map((area) => `<li>${area}</li>`).join("")
+        }
             </ul>
           </div>
-          ` : ''}
+          `
+        : ""
+    }
           
-          ${getEmailFooter('GuestGlow Analytics')}
+          ${getEmailFooter("GuestGlow Analytics")}
         </div>
       </div>
-    `
-  }
+    `,
+  };
 }
 
 /**
  * System Notification Template
  */
-function generateSystemNotificationTemplate(data: EmailTemplateData): EmailTemplate {
+function generateSystemNotificationTemplate(
+  data: EmailTemplateData,
+): EmailTemplate {
   const urgencyColors = {
-    low: '#059669',
-    normal: '#2563eb', 
-    high: '#f59e0b',
-    urgent: '#dc2626'
-  }
-  
-  const urgencyColor = urgencyColors[data.urgency_level || 'normal']
-  
+    low: "#059669",
+    normal: "#2563eb",
+    high: "#f59e0b",
+    urgent: "#dc2626",
+  };
+
+  const urgencyColor = urgencyColors[data.urgency_level || "normal"];
+
   return {
-    subject: `🔔 System Notification - ${data.urgency_level?.toUpperCase() || 'INFO'}`,
+    subject: `🔔 System Notification - ${
+      data.urgency_level?.toUpperCase() || "INFO"
+    }`,
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px;">
         <div style="background: ${urgencyColor}; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
           <h1 style="margin: 0; font-size: 24px;">🔔 System Notification</h1>
-          <p style="margin: 10px 0 0 0; font-size: 16px;">${data.urgency_level?.toUpperCase() || 'INFORMATION'}</p>
+          <p style="margin: 10px 0 0 0; font-size: 16px;">${
+      data.urgency_level?.toUpperCase() || "INFORMATION"
+    }</p>
         </div>
         
         <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
           <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
-            <p>${data.custom_message || 'System notification message'}</p>
+            <p>${data.custom_message || "System notification message"}</p>
           </div>
           
-          ${getEmailFooter('GuestGlow System')}
+          ${getEmailFooter("GuestGlow System")}
         </div>
       </div>
-    `
-  }
+    `,
+  };
 }
 
 /**
  * Satisfaction Followup Template
  */
-function generateSatisfactionFollowupTemplate(data: EmailTemplateData): EmailTemplate {
+function generateSatisfactionFollowupTemplate(
+  data: EmailTemplateData,
+): EmailTemplate {
   return {
     subject: `How did we do? - Follow-up on your recent feedback`,
     html: `
@@ -334,11 +440,16 @@ function generateSatisfactionFollowupTemplate(data: EmailTemplateData): EmailTem
             </div>
           </div>
           
-          ${getEmailFooter(`The ${(data.tenant_name || data.tenant_slug)} Hotel Guest Relations Team`)}
+          ${
+      getEmailFooter(
+        `The ${(data.tenant_name ||
+          data.tenant_slug)} Hotel Guest Relations Team`,
+      )
+    }
         </div>
       </div>
-    `
-  }
+    `,
+  };
 }
 
 /**
@@ -359,20 +470,22 @@ function generateFeedbackLinkTemplate(data: EmailTemplateData): EmailTemplate {
           
           <p>Thank you for staying with us! We hope you had a wonderful experience.</p>
           
-          <p>We would greatly appreciate if you could take a moment to share your feedback about your stay${data.room_number ? ` in Room ${data.room_number}` : ''}.</p>
+          <p>We would greatly appreciate if you could take a moment to share your feedback about your stay${
+      data.room_number ? ` in Room ${data.room_number}` : ""
+    }.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.custom_message || '#'}" 
+            <a href="${data.custom_message || "#"}" 
                style="background: #2563eb; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
               Share Your Feedback
             </a>
           </div>
           
-          ${getEmailFooter('The Guest Relations Team')}
+          ${getEmailFooter("The Guest Relations Team")}
         </div>
       </div>
-    `
-  }
+    `,
+  };
 }
 
 /**
@@ -380,7 +493,8 @@ function generateFeedbackLinkTemplate(data: EmailTemplateData): EmailTemplate {
  */
 function generateEscalationTemplate(data: EmailTemplateData): EmailTemplate {
   return {
-    subject: `🚨 ESCALATION: Unresolved Feedback - Room ${data.room_number} - ${data.issue_category}`,
+    subject:
+      `🚨 ESCALATION: Unresolved Feedback - Room ${data.room_number} - ${data.issue_category}`,
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px;">
         <div style="background: #dc2626; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
@@ -389,7 +503,9 @@ function generateEscalationTemplate(data: EmailTemplateData): EmailTemplate {
         </div>
         
         <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
-          <h2 style="color: #333; margin-top: 0;">Dear ${data.manager_name || 'Manager'},</h2>
+          <h2 style="color: #333; margin-top: 0;">Dear ${
+      data.manager_name || "Manager"
+    },</h2>
           
           <div style="background: #fee2e2; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #dc2626;">
             <p style="margin: 0;"><strong>This feedback requires immediate attention.</strong> It has been escalated due to lack of response or resolution.</p>
@@ -401,7 +517,9 @@ function generateEscalationTemplate(data: EmailTemplateData): EmailTemplate {
             <p><strong>Room:</strong> ${data.room_number}</p>
             <p><strong>Rating:</strong> ${data.rating}/5 ⭐</p>
             <p><strong>Category:</strong> ${data.issue_category}</p>
-            <p><strong>Original Date:</strong> ${new Date().toLocaleDateString()}</p>
+            <p><strong>Original Date:</strong> ${
+      new Date().toLocaleDateString()
+    }</p>
           </div>
           
           <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
@@ -411,11 +529,11 @@ function generateEscalationTemplate(data: EmailTemplateData): EmailTemplate {
             </p>
           </div>
           
-          ${getEmailFooter('GuestGlow Escalation System', data.feedback_id)}
+          ${getEmailFooter("GuestGlow Escalation System", data.feedback_id)}
         </div>
       </div>
-    `
-  }
+    `,
+  };
 }
 
 /**
@@ -446,11 +564,11 @@ function generateTenantWelcomeTemplate(data: EmailTemplateData): EmailTemplate {
             </ul>
           </div>
           
-          ${getEmailFooter('The GuestGlow Team')}
+          ${getEmailFooter("The GuestGlow Team")}
         </div>
       </div>
-    `
-  }
+    `,
+  };
 }
 
 /**
@@ -463,7 +581,11 @@ function getEmailFooter(senderName: string, additionalInfo?: string): string {
         Best regards,<br>
         <strong>${senderName}</strong>
       </p>
-      ${additionalInfo ? `<p style="color: #999; font-size: 12px;">${additionalInfo}</p>` : ''}
+      ${
+    additionalInfo
+      ? `<p style="color: #999; font-size: 12px;">${additionalInfo}</p>`
+      : ""
+  }
     </div>
-  `
+  `;
 }

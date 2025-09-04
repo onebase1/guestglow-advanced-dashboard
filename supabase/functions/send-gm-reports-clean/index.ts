@@ -1,244 +1,302 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
 
-    const { tenant_id, report_type } = await req.json()
-    
-    console.log('📊 Generating factual GM report:', { tenant_id, report_type })
+    const { tenant_id, report_type } = await req.json();
+
+    console.log("📊 Generating factual GM report:", { tenant_id, report_type });
 
     // Get tenant info
     const { data: tenant } = await supabase
-      .from('tenants')
-      .select('name')
-      .eq('id', tenant_id)
-      .single()
+      .from("tenants")
+      .select("name")
+      .eq("id", tenant_id)
+      .single();
 
     if (!tenant) {
-      throw new Error('Tenant not found')
+      throw new Error("Tenant not found");
     }
 
     // Ensure we have fresh TripAdvisor data before generating reports
-    await ensureFreshTripAdvisorData(supabase, tenant_id)
+    await ensureFreshTripAdvisorData(supabase, tenant_id);
 
-    let emailContent: string
-    let subject: string
+    let emailContent: string;
+    let subject: string;
 
-    if (report_type === 'daily') {
-      const result = await generateFactualDailyBriefing(supabase, tenant_id, tenant.name)
-      emailContent = result.content
-      subject = result.subject
-    } else if (report_type === 'weekly') {
-      const result = await generateFactualWeeklyReport(supabase, tenant_id, tenant.name)
-      emailContent = result.content
-      subject = result.subject
-    } else if (report_type === 'urgent') {
-      const result = await generateFactualUrgentAlert(supabase, tenant_id, tenant.name)
-      emailContent = result.content
-      subject = result.subject
+    if (report_type === "daily") {
+      const result = await generateFactualDailyBriefing(
+        supabase,
+        tenant_id,
+        tenant.name,
+      );
+      emailContent = result.content;
+      subject = result.subject;
+    } else if (report_type === "weekly") {
+      const result = await generateFactualWeeklyReport(
+        supabase,
+        tenant_id,
+        tenant.name,
+      );
+      emailContent = result.content;
+      subject = result.subject;
+    } else if (report_type === "urgent") {
+      const result = await generateFactualUrgentAlert(
+        supabase,
+        tenant_id,
+        tenant.name,
+      );
+      emailContent = result.content;
+      subject = result.subject;
     } else {
-      throw new Error('Invalid report type')
+      throw new Error("Invalid report type");
     }
 
     // Send email using Resend
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY not configured')
+      throw new Error("RESEND_API_KEY not configured");
     }
 
-    const emailResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+    const emailResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: 'GuestGlow Reports <reports@guest-glow.com>',
-        to: ['g.basera@yahoo.com'],
-        cc: ['gizzy@guest-glow.com'],
+        from: "GuestGlow Reports <reports@guest-glow.com>",
+        to: ["g.basera@yahoo.com"],
+        cc: ["gizzy@guest-glow.com"],
         subject: subject,
         html: emailContent,
       }),
-    })
+    });
 
     if (!emailResponse.ok) {
-      const errorText = await emailResponse.text()
-      throw new Error(`Failed to send email: ${errorText}`)
+      const errorText = await emailResponse.text();
+      throw new Error(`Failed to send email: ${errorText}`);
     }
 
-    const emailResult = await emailResponse.json()
-    console.log('✅ Email sent successfully:', emailResult.id)
+    const emailResult = await emailResponse.json();
+    console.log("✅ Email sent successfully:", emailResult.id);
+
+    // Log GM report send for analytics
+    try {
+      await supabase
+        .from("system_logs")
+        .insert({
+          tenant_id: tenant_id,
+          event_type: "system_event",
+          event_category: "gm_reports",
+          event_name: "report_sent",
+          event_data: {
+            report_type,
+            subject,
+            recipients: ["g.basera@yahoo.com"],
+            cc: ["gizzy@guest-glow.com"],
+            email_id: emailResult.id,
+          },
+          severity: "info",
+        });
+    } catch (e) {
+      console.warn("GM factual report logging failed (non-blocking):", e);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         email_id: emailResult.id,
-        message: 'Factual GM report sent successfully'
+        message: "Factual GM report sent successfully",
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
-      }
-    )
-
+      },
+    );
   } catch (error) {
-    console.error('❌ Error sending GM report:', error)
+    console.error("❌ Error sending GM report:", error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error.message,
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
-      }
-    )
+      },
+    );
   }
-})
+});
 
-async function generateFactualDailyBriefing(supabase: any, tenantId: string, tenantName: string) {
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+async function generateFactualDailyBriefing(
+  supabase: any,
+  tenantId: string,
+  tenantName: string,
+) {
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday =
+    new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  console.log('🔍 Checking for actual data to report...')
+  console.log("🔍 Checking for actual data to report...");
 
   // Get latest TripAdvisor scraping data
   const { data: latestScrapes } = await supabase
-    .from('tripadvisor_scrapes')
-    .select('rating, total_reviews, scraped_at, rating_breakdown, category_scores')
-    .eq('tenant_id', tenantId)
-    .order('scraped_at', { ascending: false })
-    .limit(2)
+    .from("tripadvisor_scrapes")
+    .select(
+      "rating, total_reviews, scraped_at, rating_breakdown, category_scores",
+    )
+    .eq("tenant_id", tenantId)
+    .order("scraped_at", { ascending: false })
+    .limit(2);
 
   // Get actual recent feedback (last 24 hours)
   const { data: recentFeedback } = await supabase
-    .from('feedback')
-    .select('rating, category, comment, created_at')
-    .eq('tenant_id', tenantId)
-    .gte('created_at', yesterday)
-    .lt('created_at', new Date().toISOString())
-    .order('created_at', { ascending: false })
+    .from("feedback")
+    .select("rating, category, comment, created_at")
+    .eq("tenant_id", tenantId)
+    .gte("created_at", yesterday)
+    .lt("created_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
 
   // Get actual near-miss tracking (5-star internal submissions)
   const { data: nearMisses } = await supabase
-    .from('near_miss_tracking')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .eq('conversion_status', 'pending')
-    .gte('created_at', lastWeek)
+    .from("near_miss_tracking")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .eq("conversion_status", "pending")
+    .gte("created_at", lastWeek);
 
   // Get actual issues from recent feedback (≤3 stars)
   const { data: recentIssues } = await supabase
-    .from('feedback')
-    .select('category, comment, rating, created_at')
-    .eq('tenant_id', tenantId)
-    .lte('rating', 3)
-    .gte('created_at', lastWeek)
-    .lt('created_at', new Date().toISOString())
-    .order('created_at', { ascending: false })
+    .from("feedback")
+    .select("category, comment, rating, created_at")
+    .eq("tenant_id", tenantId)
+    .lte("rating", 3)
+    .gte("created_at", lastWeek)
+    .lt("created_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
 
-  console.log('📊 Data availability check:', {
+  console.log("📊 Data availability check:", {
     tripAdvisorScrapes: latestScrapes?.length || 0,
     recentFeedback: recentFeedback?.length || 0,
     nearMisses: nearMisses?.length || 0,
-    recentIssues: recentIssues?.length || 0
-  })
+    recentIssues: recentIssues?.length || 0,
+  });
 
   // Determine what we actually have to report
-  const hasTripAdvisorData = latestScrapes && latestScrapes.length > 0
-  const hasRecentFeedback = recentFeedback && recentFeedback.length > 0
-  const hasNearMisses = nearMisses && nearMisses.length > 0
-  const hasRecentIssues = recentIssues && recentIssues.length > 0
+  const hasTripAdvisorData = latestScrapes && latestScrapes.length > 0;
+  const hasRecentFeedback = recentFeedback && recentFeedback.length > 0;
+  const hasNearMisses = nearMisses && nearMisses.length > 0;
+  const hasRecentIssues = recentIssues && recentIssues.length > 0;
 
   // Only report on actual data - no fabrication
-  let reportSections = []
+  let reportSections = [];
 
   // TripAdvisor section (only if we have data)
   if (hasTripAdvisorData) {
-    const latest = latestScrapes[0]
-    const ratingChange = latestScrapes.length > 1 ? 
-      parseFloat(latest.rating) - parseFloat(latestScrapes[1].rating) : 0
+    const latest = latestScrapes[0];
+    const ratingChange = latestScrapes.length > 1
+      ? parseFloat(latest.rating) - parseFloat(latestScrapes[1].rating)
+      : 0;
 
     reportSections.push({
-      type: 'tripadvisor',
+      type: "tripadvisor",
       data: {
         rating: parseFloat(latest.rating),
         totalReviews: latest.total_reviews,
         ratingChange: ratingChange,
         ratingBreakdown: latest.rating_breakdown,
         categoryScores: latest.category_scores,
-        lastUpdated: latest.scraped_at
-      }
-    })
+        lastUpdated: latest.scraped_at,
+      },
+    });
   }
 
   // Recent feedback section (only if we have data)
   if (hasRecentFeedback) {
-    const fiveStarCount = recentFeedback.filter(f => f.rating === 5).length
-    const avgRating = recentFeedback.reduce((sum, f) => sum + f.rating, 0) / recentFeedback.length
+    const fiveStarCount = recentFeedback.filter((f) => f.rating === 5).length;
+    const avgRating = recentFeedback.reduce((sum, f) => sum + f.rating, 0) /
+      recentFeedback.length;
 
     reportSections.push({
-      type: 'recent_feedback',
+      type: "recent_feedback",
       data: {
         totalSubmissions: recentFeedback.length,
         fiveStarCount: fiveStarCount,
         averageRating: Math.round(avgRating * 10) / 10,
-        feedback: recentFeedback.slice(0, 3)
-      }
-    })
+        feedback: recentFeedback.slice(0, 3),
+      },
+    });
   }
 
   // Near-miss section (only if we have data)
   if (hasNearMisses) {
     reportSections.push({
-      type: 'near_misses',
+      type: "near_misses",
       data: {
         count: nearMisses.length,
-        details: nearMisses
-      }
-    })
+        details: nearMisses,
+      },
+    });
   }
 
   // Issues section (only if we have data)
   if (hasRecentIssues) {
     reportSections.push({
-      type: 'issues',
+      type: "issues",
       data: {
         count: recentIssues.length,
-        issues: recentIssues.slice(0, 3)
-      }
-    })
+        issues: recentIssues.slice(0, 3),
+      },
+    });
   }
 
   // Generate subject based on what we have to report
-  let subject = `📊 ${tenantName} - Daily Briefing • ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
-  
+  let subject = `📊 ${tenantName} - Daily Briefing • ${
+    new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+  }`;
+
   if (reportSections.length === 0) {
-    subject = `✅ ${tenantName} - All Quiet • ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
+    subject = `✅ ${tenantName} - All Quiet • ${
+      new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    }`;
   }
 
-  const content = generateFactualEmailContent(tenantName, reportSections)
+  const content = generateFactualEmailContent(tenantName, reportSections);
 
-  return { subject, content }
+  return { subject, content };
 }
 
-function generateFactualEmailContent(tenantName: string, reportSections: any[]) {
-  const hasData = reportSections.length > 0
+function generateFactualEmailContent(
+  tenantName: string,
+  reportSections: any[],
+) {
+  const hasData = reportSections.length > 0;
 
   return `
 <!DOCTYPE html>
@@ -263,11 +321,21 @@ function generateFactualEmailContent(tenantName: string, reportSections: any[]) 
 <body>
     <div class="email-container">
         <div class="header">
-            <div class="logo">${hasData ? '📊' : '✅'} ${tenantName.toUpperCase()} - DAILY BRIEFING</div>
-            <div style="color: #6b7280; font-size: 16px;">Date: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} • 8:00 AM Report</div>
+            <div class="logo">${
+    hasData ? "📊" : "✅"
+  } ${tenantName.toUpperCase()} - DAILY BRIEFING</div>
+            <div style="color: #6b7280; font-size: 16px;">Date: ${
+    new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    })
+  } • 8:00 AM Report</div>
         </div>
 
-        ${hasData ? generateDataSections(reportSections) : generateQuietDayContent()}
+        ${
+    hasData ? generateDataSections(reportSections) : generateQuietDayContent()
+  }
 
         <div class="footer">
             <p>📧 GuestGlow Analytics • Factual Data Only</p>
@@ -275,7 +343,7 @@ function generateFactualEmailContent(tenantName: string, reportSections: any[]) 
         </div>
     </div>
 </body>
-</html>`
+</html>`;
 }
 
 function generateQuietDayContent() {
@@ -295,24 +363,24 @@ function generateQuietDayContent() {
             <p style="margin: 15px 0; font-size: 14px; color: #6b7280;">
                 <em>This is often a sign of stable operations. We'll continue monitoring and report when there's actionable information.</em>
             </p>
-        </div>`
+        </div>`;
 }
 
 function generateDataSections(reportSections: any[]) {
-  return reportSections.map(section => {
+  return reportSections.map((section) => {
     switch (section.type) {
-      case 'tripadvisor':
-        return generateTripAdvisorSection(section.data)
-      case 'recent_feedback':
-        return generateRecentFeedbackSection(section.data)
-      case 'near_misses':
-        return generateNearMissSection(section.data)
-      case 'issues':
-        return generateIssuesSection(section.data)
+      case "tripadvisor":
+        return generateTripAdvisorSection(section.data);
+      case "recent_feedback":
+        return generateRecentFeedbackSection(section.data);
+      case "near_misses":
+        return generateNearMissSection(section.data);
+      case "issues":
+        return generateIssuesSection(section.data);
       default:
-        return ''
+        return "";
     }
-  }).join('')
+  }).join("");
 }
 
 function generateTripAdvisorSection(data: any) {
@@ -321,7 +389,9 @@ function generateTripAdvisorSection(data: any) {
         <div class="metrics-section">
             <div class="metric-row">
                 <span class="metric-label">Current Rating:</span>
-                <span class="metric-value">${data.rating}⭐ (${data.ratingChange >= 0 ? '+' : ''}${data.ratingChange.toFixed(2)} change)</span>
+                <span class="metric-value">${data.rating}⭐ (${
+    data.ratingChange >= 0 ? "+" : ""
+  }${data.ratingChange.toFixed(2)} change)</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">Total Reviews:</span>
@@ -329,65 +399,97 @@ function generateTripAdvisorSection(data: any) {
             </div>
             <div class="metric-row">
                 <span class="metric-label">Last Updated:</span>
-                <span class="metric-value">${new Date(data.lastUpdated).toLocaleDateString('en-GB')}</span>
+                <span class="metric-value">${
+    new Date(data.lastUpdated).toLocaleDateString("en-GB")
+  }</span>
             </div>
         </div>
 
-        ${data.ratingBreakdown ? `
+        ${
+    data.ratingBreakdown
+      ? `
         <h3>📊 RATING BREAKDOWN</h3>
         <div class="metrics-section">
             <div class="metric-row">
                 <span class="metric-label">Excellent (5⭐):</span>
-                <span class="metric-value">${data.ratingBreakdown.excellent || 0} reviews</span>
+                <span class="metric-value">${
+        data.ratingBreakdown.excellent || 0
+      } reviews</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">Good (4⭐):</span>
-                <span class="metric-value">${data.ratingBreakdown.good || 0} reviews</span>
+                <span class="metric-value">${
+        data.ratingBreakdown.good || 0
+      } reviews</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">Average (3⭐):</span>
-                <span class="metric-value">${data.ratingBreakdown.average || 0} reviews</span>
+                <span class="metric-value">${
+        data.ratingBreakdown.average || 0
+      } reviews</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">Poor (2⭐):</span>
-                <span class="metric-value">${data.ratingBreakdown.poor || 0} reviews</span>
+                <span class="metric-value">${
+        data.ratingBreakdown.poor || 0
+      } reviews</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">Terrible (1⭐):</span>
-                <span class="metric-value">${data.ratingBreakdown.terrible || 0} reviews</span>
+                <span class="metric-value">${
+        data.ratingBreakdown.terrible || 0
+      } reviews</span>
             </div>
         </div>
-        ` : ''}
+        `
+      : ""
+  }
 
-        ${data.categoryScores ? `
+        ${
+    data.categoryScores
+      ? `
         <h3>📋 CATEGORY PERFORMANCE</h3>
         <div class="metrics-section">
             <div class="metric-row">
                 <span class="metric-label">🛏️ Rooms:</span>
-                <span class="metric-value">${data.categoryScores.rooms || 'N/A'}⭐</span>
+                <span class="metric-value">${
+        data.categoryScores.rooms || "N/A"
+      }⭐</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">🛎️ Service:</span>
-                <span class="metric-value">${data.categoryScores.service || 'N/A'}⭐</span>
+                <span class="metric-value">${
+        data.categoryScores.service || "N/A"
+      }⭐</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">💰 Value:</span>
-                <span class="metric-value">${data.categoryScores.value || 'N/A'}⭐</span>
+                <span class="metric-value">${
+        data.categoryScores.value || "N/A"
+      }⭐</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">🧹 Cleanliness:</span>
-                <span class="metric-value">${data.categoryScores.cleanliness || 'N/A'}⭐</span>
+                <span class="metric-value">${
+        data.categoryScores.cleanliness || "N/A"
+      }⭐</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">📍 Location:</span>
-                <span class="metric-value">${data.categoryScores.location || 'N/A'}⭐</span>
+                <span class="metric-value">${
+        data.categoryScores.location || "N/A"
+      }⭐</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">😴 Sleep Quality:</span>
-                <span class="metric-value">${data.categoryScores.sleep_quality || 'N/A'}⭐</span>
+                <span class="metric-value">${
+        data.categoryScores.sleep_quality || "N/A"
+      }⭐</span>
             </div>
         </div>
-        ` : ''}`
+        `
+      : ""
+  }`;
 }
 
 function generateRecentFeedbackSection(data: any) {
@@ -406,15 +508,23 @@ function generateRecentFeedbackSection(data: any) {
                 <span class="metric-label">Average Rating:</span>
                 <span class="metric-value">${data.averageRating}⭐</span>
             </div>
-            ${data.feedback.length > 0 ? `
+            ${
+    data.feedback.length > 0
+      ? `
             <div style="margin-top: 15px; font-size: 14px;">
                 <strong>Recent Submissions:</strong><br>
-                ${data.feedback.map(f => `
-                • ${f.rating}⭐ - ${f.category || 'General'}: ${f.comment ? f.comment.substring(0, 80) + '...' : 'No comment'}
-                `).join('<br>')}
+                ${
+        data.feedback.map((f) => `
+                • ${f.rating}⭐ - ${f.category || "General"}: ${
+          f.comment ? f.comment.substring(0, 80) + "..." : "No comment"
+        }
+                `).join("<br>")
+      }
             </div>
-            ` : ''}
-        </div>`
+            `
+      : ""
+  }
+        </div>`;
 }
 
 function generateNearMissSection(data: any) {
@@ -430,7 +540,7 @@ function generateNearMissSection(data: any) {
                 <strong>Strategy:</strong> Focus on operational excellence to encourage organic external reviews<br>
                 <strong>Note:</strong> QR submissions are anonymous - no direct contact possible
             </p>
-        </div>`
+        </div>`;
 }
 
 function generateIssuesSection(data: any) {
@@ -441,52 +551,118 @@ function generateIssuesSection(data: any) {
                 <span class="metric-label">Issues Reported:</span>
                 <span class="metric-value">${data.count} feedback ≤3⭐</span>
             </div>
-            ${data.issues.length > 0 ? `
+            ${
+    data.issues.length > 0
+      ? `
             <div style="margin-top: 15px; font-size: 14px;">
                 <strong>Recent Issues:</strong><br>
-                ${data.issues.map(issue => `
-                • ${issue.rating}⭐ - ${issue.category || 'General'}: ${issue.comment ? issue.comment.substring(0, 80) + '...' : 'No details'}
-                `).join('<br>')}
+                ${
+        data.issues.map((issue) => `
+                • ${issue.rating}⭐ - ${issue.category || "General"}: ${
+          issue.comment ? issue.comment.substring(0, 80) + "..." : "No details"
+        }
+                `).join("<br>")
+      }
             </div>
             <p style="margin: 10px 0; font-size: 14px; color: #d97706;">
                 <strong>Action Required:</strong> Address these operational issues to prevent external negative reviews
             </p>
-            ` : ''}
-        </div>`
+            `
+      : ""
+  }
+        </div>`;
 }
 
-async function generateFactualWeeklyReport(supabase: any, tenantId: string, tenantName: string) {
+async function generateFactualWeeklyReport(
+  supabase: any,
+  tenantId: string,
+  tenantName: string,
+) {
   // For now, return a simple weekly summary - can be enhanced later
-  const subject = `📊 ${tenantName} - Weekly Summary • ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
-  const content = generateFactualEmailContent(tenantName, [])
-  return { subject, content }
+  const subject = `📊 ${tenantName} - Weekly Summary • ${
+    new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+  }`;
+  const content = generateFactualEmailContent(tenantName, []);
+  return { subject, content };
 }
 
-async function generateFactualUrgentAlert(supabase: any, tenantId: string, tenantName: string) {
+async function generateFactualUrgentAlert(
+  supabase: any,
+  tenantId: string,
+  tenantName: string,
+) {
   // Check for actual urgent issues - only report if real problems exist
-  const subject = `✅ ${tenantName} - All Clear • ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
-  const content = generateFactualEmailContent(tenantName, [])
-  return { subject, content }
+  const subject = `✅ ${tenantName} - All Clear • ${
+    new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+  }`;
+  const content = generateFactualEmailContent(tenantName, []);
+  return { subject, content };
 }
 
 async function ensureFreshTripAdvisorData(supabase: any, tenantId: string) {
-  console.log('🔍 Checking for fresh TripAdvisor data...')
+  console.log("🔍 Checking for fresh TripAdvisor data...");
 
   // Check if we have recent data (within last 24 hours)
   const { data: recentScrape } = await supabase
-    .from('tripadvisor_scrapes')
-    .select('scraped_at')
-    .eq('tenant_id', tenantId)
-    .gte('scraped_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-    .order('scraped_at', { ascending: false })
+    .from("tripadvisor_scrapes")
+    .select("scraped_at")
+    .eq("tenant_id", tenantId)
+    .gte("scraped_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .order("scraped_at", { ascending: false })
     .limit(1)
-    .single()
+    .single();
 
   if (recentScrape) {
-    console.log('✅ Fresh TripAdvisor data available:', recentScrape.scraped_at)
-    return
+    console.log(
+      "✅ Fresh TripAdvisor data available:",
+      recentScrape.scraped_at,
+    );
+    return;
   }
 
-  console.log('🔄 No recent TripAdvisor data found, would trigger scrape if API key available...')
-  // Note: Scraping would happen here if FIRECRAWL_API_KEY is configured
+  console.log("🔄 No recent TripAdvisor data found, triggering scrape...");
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.log("⚠️ Missing Supabase credentials for scraping");
+      return;
+    }
+
+    const scrapeResponse = await fetch(
+      `${supabaseUrl}/functions/v1/scrape-tripadvisor-rating`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          tripadvisor_url:
+            "https://www.tripadvisor.com/Hotel_Review-g2400444-d2399149-Reviews-Eusbett_Hotel-Sunyani_Brong_Ahafo_Region.html",
+        }),
+      },
+    );
+
+    if (!scrapeResponse.ok) {
+      const txt = await scrapeResponse.text();
+      throw new Error(`Scrape trigger failed: ${scrapeResponse.status} ${txt}`);
+    }
+
+    const scrapeResult = await scrapeResponse.json();
+    console.log("✅ Scrape triggered:", scrapeResult);
+  } catch (e) {
+    console.error("❌ Failed to trigger TripAdvisor scrape:", e);
+  }
 }

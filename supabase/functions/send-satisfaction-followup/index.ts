@@ -2,9 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 interface SatisfactionFollowupRequest {
@@ -12,39 +13,46 @@ interface SatisfactionFollowupRequest {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
-  if (req.method !== 'POST') {
-    return new Response('Method not allowed', { 
-      status: 405, 
-      headers: corsHeaders 
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: corsHeaders,
     });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceKey = (Deno.env.get('SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'))!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = (Deno.env.get("SERVICE_ROLE_KEY") ??
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const requestData: SatisfactionFollowupRequest = await req.json();
     const { feedback_id } = requestData;
 
     if (!feedback_id) {
-      return new Response(JSON.stringify({
-        error: 'feedback_id is required'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({
+          error: "feedback_id is required",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    console.log('📧 Satisfaction Follow-up: Processing feedback ID:', feedback_id);
+    console.log(
+      "📧 Satisfaction Follow-up: Processing feedback ID:",
+      feedback_id,
+    );
 
     // Get feedback details
     const { data: feedback, error: feedbackError } = await supabase
-      .from('feedback')
+      .from("feedback")
       .select(`
         id,
         guest_name,
@@ -57,64 +65,76 @@ serve(async (req) => {
         resolved_at,
         status
       `)
-      .eq('id', feedback_id)
+      .eq("id", feedback_id)
       .single();
 
     if (feedbackError || !feedback) {
-      console.error('Feedback not found:', feedbackError);
-      return new Response(JSON.stringify({
-        error: 'Feedback not found',
-        feedback_id
-      }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      console.error("Feedback not found:", feedbackError);
+      return new Response(
+        JSON.stringify({
+          error: "Feedback not found",
+          feedback_id,
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Only send satisfaction follow-up if guest provided email
     if (!feedback.guest_email) {
-      console.log('⚠️ No guest email provided, skipping satisfaction follow-up');
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'No guest email provided, satisfaction follow-up skipped',
-        feedback_id
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      console.log(
+        "⚠️ No guest email provided, skipping satisfaction follow-up",
+      );
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "No guest email provided, satisfaction follow-up skipped",
+          feedback_id,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Check if we already sent a satisfaction follow-up for this feedback
     const { data: existingFollowup } = await supabase
-      .from('communication_logs')
-      .select('id')
-      .eq('feedback_id', feedback_id)
-      .eq('email_type', 'satisfaction_followup')
+      .from("communication_logs")
+      .select("id")
+      .eq("feedback_id", feedback_id)
+      .eq("email_type", "satisfaction_followup")
       .single();
 
     if (existingFollowup) {
-      console.log('⚠️ Satisfaction follow-up already sent for this feedback');
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Satisfaction follow-up already sent',
-        feedback_id,
-        existing_followup_id: existingFollowup.id
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      console.log("⚠️ Satisfaction follow-up already sent for this feedback");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Satisfaction follow-up already sent",
+          feedback_id,
+          existing_followup_id: existingFollowup.id,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Get tenant information
     const { data: tenantInfo } = await supabase
-      .from('tenants')
-      .select('name, slug')
-      .eq('slug', 'eusbett')
+      .from("tenants")
+      .select("name, slug")
+      .eq("slug", "eusbett")
       .single();
 
-    const tenantName = tenantInfo?.name || 'Eusbett Hotel';
+    const tenantName = tenantInfo?.name || "Eusbett Hotel";
 
     // Create satisfaction survey email
-    const subject = `How did we do? Your feedback resolution follow-up - ${tenantName}`;
-    
+    const subject =
+      `How did we do? Your feedback resolution follow-up - ${tenantName}`;
+
     const emailContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb; border-radius: 8px;">
         <div style="text-align: center; margin-bottom: 30px;">
@@ -124,11 +144,21 @@ serve(async (req) => {
         
         <div style="background: white; padding: 25px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #3b82f6;">
           <h2 style="color: #1f2937; margin-top: 0; margin-bottom: 15px;">Your Original Feedback</h2>
-          <p><strong>Date:</strong> ${new Date(feedback.created_at).toLocaleDateString()}</p>
-          <p><strong>Room:</strong> ${feedback.room_number || 'Not specified'}</p>
+          <p><strong>Date:</strong> ${
+      new Date(feedback.created_at).toLocaleDateString()
+    }</p>
+          <p><strong>Room:</strong> ${
+      feedback.room_number || "Not specified"
+    }</p>
           <p><strong>Rating:</strong> ${feedback.rating}/5 stars</p>
           <p><strong>Category:</strong> ${feedback.issue_category}</p>
-          ${feedback.resolved_at ? `<p><strong>Resolved:</strong> ${new Date(feedback.resolved_at).toLocaleDateString()}</p>` : ''}
+          ${
+      feedback.resolved_at
+        ? `<p><strong>Resolved:</strong> ${
+          new Date(feedback.resolved_at).toLocaleDateString()
+        }</p>`
+        : ""
+    }
         </div>
 
         <div style="background: #f0f9ff; padding: 25px; border-radius: 8px; margin-bottom: 25px; text-align: center;">
@@ -176,68 +206,80 @@ serve(async (req) => {
       </div>`;
 
     // Send satisfaction follow-up email
-    const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-tenant-emails', {
-      body: {
-        feedback_id: feedback_id,
-        email_type: 'satisfaction_followup',
-        recipient_email: feedback.guest_email,
-        cc_emails: ['gizzy@guest-glow.com'],
-        subject: subject,
-        html_content: emailContent,
-        tenant_id: '27843a9a-b53f-482a-87ba-1a3e52f55dc1',
-        tenant_slug: 'eusbett',
-        priority: 'normal'
-      }
-    });
+    const { data: emailResult, error: emailError } = await supabase.functions
+      .invoke("send-tenant-emails", {
+        body: {
+          feedback_id: feedback_id,
+          email_type: "satisfaction_followup",
+          recipient_email: feedback.guest_email,
+          cc_emails: ["gizzy@guest-glow.com"],
+          subject: subject,
+          html_content: emailContent,
+          tenant_id: "27843a9a-b53f-482a-87ba-1a3e52f55dc1",
+          tenant_slug: "eusbett",
+          priority: "normal",
+        },
+      });
 
     if (emailError) {
-      console.error('Failed to send satisfaction follow-up email:', emailError);
+      console.error("Failed to send satisfaction follow-up email:", emailError);
       throw new Error(`Email sending failed: ${emailError.message}`);
     }
 
+    // Update feedback follow-up timestamp
+    await supabase
+      .from("feedback")
+      .update({ followup_sent_at: new Date().toISOString() })
+      .eq("id", feedback_id);
+
     // Log the satisfaction follow-up
     await supabase
-      .from('system_logs')
+      .from("system_logs")
       .insert({
-        tenant_id: '27843a9a-b53f-482a-87ba-1a3e52f55dc1',
-        event_type: 'system_event',
-        event_category: 'satisfaction_followup',
-        event_name: 'satisfaction_survey_sent',
+        tenant_id: "27843a9a-b53f-482a-87ba-1a3e52f55dc1",
+        event_type: "system_event",
+        event_category: "satisfaction_followup",
+        event_name: "satisfaction_survey_sent",
         event_data: {
           feedback_id,
           guest_name: feedback.guest_name,
           guest_email: feedback.guest_email,
           room_number: feedback.room_number,
           original_rating: feedback.rating,
-          issue_category: feedback.issue_category
+          issue_category: feedback.issue_category,
         },
-        severity: 'info'
+        severity: "info",
       });
 
-    console.log('✅ Satisfaction follow-up sent successfully:', {
+    console.log("✅ Satisfaction follow-up sent successfully:", {
       feedback_id,
       guest_email: feedback.guest_email,
-      guest_name: feedback.guest_name
+      guest_name: feedback.guest_name,
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Satisfaction follow-up sent successfully',
-      feedback_id,
-      guest_email: feedback.guest_email,
-      email_sent: true
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Satisfaction follow-up sent successfully",
+        feedback_id,
+        guest_email: feedback.guest_email,
+        email_sent: true,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
-    console.error('Error in send-satisfaction-followup:', error);
-    return new Response(JSON.stringify({
-      error: 'Satisfaction follow-up failed',
-      details: error.message
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    console.error("Error in send-satisfaction-followup:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Satisfaction follow-up failed",
+        details: error.message,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

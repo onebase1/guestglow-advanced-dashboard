@@ -21,9 +21,9 @@ export function DashboardContent({ activeTab, recentFeedback, externalReviews, o
   const renderContent = () => {
     switch (activeTab) {
       case "internal":
-        return <InternalReviewKanban reviews={recentFeedback} onStatusUpdate={onStatusUpdate} />
-      case "internal-legacy":
         return <RecentFeedbackTab recentFeedback={recentFeedback} onStatusUpdate={onStatusUpdate} />
+      case "workflow":
+        return <InternalReviewKanban reviews={recentFeedback} onStatusUpdate={onStatusUpdate} />
       case "external":
         return <UnifiedReviewDashboard
           reviews={externalReviews}

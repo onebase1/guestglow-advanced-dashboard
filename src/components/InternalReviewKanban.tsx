@@ -1,7 +1,7 @@
 /**
  * Internal Review Kanban Dashboard
  * Optimized workflow management for internal guest feedback
- * 
+ *
  * Features:
  * - Visual status pipeline (New → In Progress → Resolved)
  * - SLA countdown timers with color coding
@@ -94,6 +94,7 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [communicationLogsOpen, setCommunicationLogsOpen] = useState(false);
   const [selectedFeedbackForLogs, setSelectedFeedbackForLogs] = useState<InternalReview | null>(null);
+  const [dragEnabled, setDragEnabled] = useState(false);
   const { toast } = useToast();
 
   // Calculate SLA status and urgency
@@ -101,83 +102,83 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
     const now = new Date();
     const createdAt = new Date(review.created_at);
     const hoursElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-    
+
     // SLA: Acknowledge within 30 minutes, resolve within 24 hours
     const ackSLA = 0.5; // 30 minutes
     const resolveSLA = 24; // 24 hours
-    
+
     if (review.status === 'resolved' || review.status === 'RESOLVED') {
       return { status: 'resolved', urgency: 'none', timeLeft: 0 };
     }
-    
+
     if (!review.acknowledged_at && hoursElapsed > ackSLA) {
-      return { 
-        status: 'overdue_ack', 
-        urgency: 'critical', 
-        timeLeft: ackSLA - hoursElapsed 
+      return {
+        status: 'overdue_ack',
+        urgency: 'critical',
+        timeLeft: ackSLA - hoursElapsed
       };
     }
-    
+
     if (hoursElapsed > resolveSLA) {
-      return { 
-        status: 'overdue_resolve', 
-        urgency: 'critical', 
-        timeLeft: resolveSLA - hoursElapsed 
+      return {
+        status: 'overdue_resolve',
+        urgency: 'critical',
+        timeLeft: resolveSLA - hoursElapsed
       };
     }
-    
+
     if (hoursElapsed > resolveSLA * 0.8) {
-      return { 
-        status: 'warning', 
-        urgency: 'high', 
-        timeLeft: resolveSLA - hoursElapsed 
+      return {
+        status: 'warning',
+        urgency: 'high',
+        timeLeft: resolveSLA - hoursElapsed
       };
     }
-    
-    return { 
-      status: 'on_time', 
-      urgency: 'normal', 
-      timeLeft: resolveSLA - hoursElapsed 
+
+    return {
+      status: 'on_time',
+      urgency: 'normal',
+      timeLeft: resolveSLA - hoursElapsed
     };
   };
 
   // Calculate priority score
   const calculatePriority = (review: InternalReview) => {
     let score = 0;
-    
+
     // Rating impact (lower rating = higher priority)
     score += (6 - review.rating) * 20;
-    
+
     // Category impact
     const highPriorityCategories = ['Room Service', 'Housekeeping', 'Front Desk'];
     if (highPriorityCategories.includes(review.issue_category || '')) {
       score += 15;
     }
-    
+
     // SLA urgency
     const sla = calculateSLAStatus(review);
     if (sla.urgency === 'critical') score += 30;
     else if (sla.urgency === 'high') score += 15;
-    
+
     return score;
   };
 
   // Group reviews by status column
   const groupedReviews = useMemo(() => {
-    const filtered = selectedCategory === 'all' 
-      ? reviews 
+    const filtered = selectedCategory === 'all'
+      ? reviews
       : reviews.filter(r => r.issue_category === selectedCategory);
-    
+
     const grouped: Record<string, InternalReview[]> = {
       new: [],
       in_progress: [],
       resolved: []
     };
-    
+
     filtered.forEach(review => {
       const priority = calculatePriority(review);
       const reviewWithPriority = { ...review, priority };
-      
+
       // Determine which column this review belongs to
       for (const [columnKey, column] of Object.entries(STATUS_COLUMNS)) {
         if (column.statuses.includes(review.status)) {
@@ -186,12 +187,12 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
         }
       }
     });
-    
+
     // Sort each column by priority (highest first)
     Object.keys(grouped).forEach(key => {
       grouped[key].sort((a, b) => (b.priority || 0) - (a.priority || 0));
     });
-    
+
     return grouped;
   }, [reviews, selectedCategory]);
 
@@ -206,7 +207,7 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
     try {
       const { error } = await supabase
         .from('feedback')
-        .update({ 
+        .update({
           status: newStatus,
           acknowledged_at: newStatus === 'ACKNOWLEDGED' ? new Date().toISOString() : undefined,
           resolved_at: newStatus === 'RESOLVED' ? new Date().toISOString() : undefined
@@ -239,10 +240,10 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
 
   const ReviewCard = ({ review }: { review: InternalReview & { priority?: number } }) => {
     const sla = calculateSLAStatus(review);
-    
+
     return (
       <Card className={`mb-3 hover:shadow-md transition-shadow cursor-pointer ${
-        sla.urgency === 'critical' ? 'ring-2 ring-red-500' : 
+        sla.urgency === 'critical' ? 'ring-2 ring-red-500' :
         sla.urgency === 'high' ? 'ring-1 ring-yellow-500' : ''
       }`}>
         <CardContent className="p-4">
@@ -253,10 +254,10 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
                 <StarRating rating={review.rating} size="sm" />
                 <span className="text-sm font-medium">{review.rating}/5</span>
               </div>
-              
+
               {sla.urgency !== 'none' && (
                 <Badge variant={
-                  sla.urgency === 'critical' ? 'destructive' : 
+                  sla.urgency === 'critical' ? 'destructive' :
                   sla.urgency === 'high' ? 'secondary' : 'outline'
                 }>
                   <Clock className="h-3 w-3 mr-1" />
@@ -284,14 +285,14 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
             {/* Category and feedback preview */}
             <div className="space-y-2">
               {review.issue_category && (
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className={CATEGORY_COLORS[review.issue_category] || CATEGORY_COLORS['Other']}
                 >
                   {review.issue_category}
                 </Badge>
               )}
-              
+
               <p className="text-sm line-clamp-2 text-muted-foreground">
                 {review.feedback_text}
               </p>
@@ -303,7 +304,7 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
                 <Calendar className="h-3 w-3" />
                 {new Date(review.created_at).toLocaleDateString()}
               </div>
-              
+
               <div className="flex items-center gap-1">
                 {review.guest_email && (
                   <Button
@@ -313,14 +314,14 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
                     onClick={() => openCommunicationLogs(review)}
                     title="View email history"
                   >
-                    <Mail className="h-3 w-3" />
+                    <div className="relative"><Mail className="h-3 w-3" /><span className="absolute -top-1 -right-1 text-[9px] bg-white/70 text-slate-700 dark:text-slate-900 rounded px-1 leading-none">•</span></div>
                   </Button>
                 )}
-                
+
                 {/* Status action buttons */}
                 {review.status === 'new' || review.status === 'NEW' ? (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={() => updateReviewStatus(review.id, 'ACKNOWLEDGED')}
                     disabled={updatingStatus === review.id}
                     className="h-7 px-2 text-xs"
@@ -328,8 +329,8 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
                     Acknowledge
                   </Button>
                 ) : review.status === 'ACKNOWLEDGED' ? (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={() => updateReviewStatus(review.id, 'RESOLVED')}
                     disabled={updatingStatus === review.id}
                     className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700"
@@ -355,11 +356,11 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
             Kanban workflow for guest feedback • {reviews.length} total reviews
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4" />
-          <select 
-            value={selectedCategory} 
+          <select
+            value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="text-sm border rounded px-3 py-1"
           >
@@ -368,15 +369,18 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
+          <div className="flex items-center gap-2 ml-4">
+            <label className="text-sm text-muted-foreground">Move items</label>
+            <input type="checkbox" checked={dragEnabled} onChange={(e) => setDragEnabled(e.target.checked)} />
+          </div>
         </div>
-      </div>
 
       {/* Kanban Board */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {Object.entries(STATUS_COLUMNS).map(([columnKey, column]) => {
           const columnReviews = groupedReviews[columnKey] || [];
           const Icon = column.icon;
-          
+
           return (
             <div key={columnKey} className={`rounded-lg border-2 ${column.color}`}>
               {/* Column Header */}
@@ -391,7 +395,7 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
                   </Badge>
                 </div>
               </div>
-              
+
               {/* Column Content */}
               <div className="p-4 min-h-[400px]">
                 {columnReviews.length > 0 ? (
@@ -409,6 +413,8 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
           );
         })}
       </div>
+      </div>
+
 
       {/* Communication Logs Modal */}
       {selectedFeedbackForLogs && (
@@ -419,6 +425,10 @@ export function InternalReviewKanban({ reviews, onStatusUpdate }: InternalReview
           onClose={() => setCommunicationLogsOpen(false)}
         />
       )}
+      {/* filler to balance divs */}
+
+
+
     </div>
   );
 }

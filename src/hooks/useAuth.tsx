@@ -46,24 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
-  const signUp = async (email: string, password: string) => {
-    // 🔒 TENANT-AWARE REDIRECT URL
-    const currentPath = window.location.pathname
-    const tenantMatch = currentPath.match(/^\/([^\/]+)\//)
-    const tenantSlug = tenantMatch ? tenantMatch[1] : null
-
-    const redirectUrl = tenantSlug
-      ? `${window.location.origin}/${tenantSlug}/dashboard`
-      : `${window.location.origin}/`
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
-      }
-    })
-    return { error }
+  const signUp = async (_email: string, _password: string) => {
+    // Public sign-ups are disabled. Use Request Access / Admin Invite only.
+    return { error: new Error('Signups are disabled. Please request access from an administrator.') }
   }
 
   const signOut = async () => {

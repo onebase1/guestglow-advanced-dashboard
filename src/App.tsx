@@ -21,6 +21,12 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Security from "./pages/Security";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
+import AccessRequests from "./pages/AccessRequests";
+import UsersAndRoles from "./pages/UsersAndRoles";
+
+
+
 import { TenantAuthMiddleware } from "./middleware/TenantAuthMiddleware";
 
 const queryClient = new QueryClient();
@@ -43,6 +49,15 @@ const AppContent = () => {
 
         {/* 🔐 TENANT-SCOPED AUTHENTICATION */}
         <Route path="/:tenantSlug/auth" element={<TenantAuth />} />
+        <Route path="/:tenantSlug/reset-password" element={<TenantAuthMiddleware requireAuth={false}>
+          <ResetPassword />
+        </TenantAuthMiddleware>} />
+        <Route path="/:tenantSlug/access-requests" element={<TenantAuthMiddleware requireAuth={true} allowedRoles={["admin"]}>
+          <AccessRequests />
+        </TenantAuthMiddleware>} />
+        <Route path="/:tenantSlug/users" element={<TenantAuthMiddleware requireAuth={true} allowedRoles={["admin"]}>
+          <UsersAndRoles />
+        </TenantAuthMiddleware>} />
 
         {/* 🛡️ TENANT-SPECIFIC PROTECTED ROUTES */}
         <Route path="/:tenantSlug/quick-feedback" element={
@@ -101,7 +116,7 @@ const AppContent = () => {
 };
 
 const App = () => {
-  
+
   return (
     <ErrorBoundary>
   <QueryClientProvider client={queryClient}>

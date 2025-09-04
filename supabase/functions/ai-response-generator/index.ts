@@ -1,86 +1,92 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 interface AIRequest {
-  reviewText?: string
-  feedback_text?: string
-  rating: number
-  isExternal?: boolean
-  platform?: string
-  guestName?: string
-  guest_name?: string
-  tenant_id: string
-  tenant_slug: string
-  issue_category?: string
-  room_number?: string
-  analysis_type?: 'severity_assessment' | 'guest_response'
+  reviewText?: string;
+  feedback_text?: string;
+  rating: number;
+  isExternal?: boolean;
+  platform?: string;
+  guestName?: string;
+  guest_name?: string;
+  tenant_id: string;
+  tenant_slug: string;
+  issue_category?: string;
+  room_number?: string;
+  analysis_type?: "severity_assessment" | "guest_response";
+  feedback_id?: string | null;
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const request: AIRequest = await req.json()
-    
+    const request: AIRequest = await req.json();
+
     // Handle both old and new request formats
-    const guestName = request.guestName || request.guest_name || 'Guest'
-    const feedbackText = request.reviewText || request.feedback_text || ''
-    const analysisType = request.analysis_type || 'guest_response'
-    
-    console.log('🤖 Generating AI response for:', {
+    const guestName = request.guestName || request.guest_name || "Guest";
+    const feedbackText = request.reviewText || request.feedback_text || "";
+    const analysisType = request.analysis_type || "guest_response";
+
+    console.log("🤖 Generating AI response for:", {
       guest: guestName,
       rating: request.rating,
       tenant: request.tenant_slug,
       isExternal: request.isExternal,
-      analysisType
-    })
-    
+      analysisType,
+    });
+
     // Handle severity analysis requests
-    if (analysisType === 'severity_assessment') {
+    if (analysisType === "severity_assessment") {
       const severityResponse = await generateSeverityAnalysis({
         feedbackText,
         rating: request.rating,
         guestName,
-        issueCategory: request.issue_category || 'General',
-        roomNumber: request.room_number
-      })
-      
+        issueCategory: request.issue_category || "General",
+        roomNumber: request.room_number,
+      });
+
       return new Response(
         JSON.stringify({
           success: true,
           content: severityResponse,
-          type: 'severity_analysis'
+          type: "severity_analysis",
         }),
         {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
-        }
-      )
+        },
+      );
     }
 
     // Initialize Supabase client
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
 
     // Get tenant information for personalization
     const { data: tenant } = await supabase
-      .from('tenants')
-      .select('name, brand_voice, contact_email')
-      .eq('id', request.tenant_id)
-      .single()
+      .from("tenants")
+      .select("name, brand_voice, contact_email")
+      .eq("id", request.tenant_id)
+      .single();
 
-    const hotelName = tenant?.name || `${request.tenant_slug.charAt(0).toUpperCase() + request.tenant_slug.slice(1)} Hotel`
-    const brandVoice = tenant?.brand_voice || 'professional and friendly'
+    const hotelName = tenant?.name ||
+      `${
+        request.tenant_slug.charAt(0).toUpperCase() +
+        request.tenant_slug.slice(1)
+      } Hotel`;
+    const brandVoice = tenant?.brand_voice || "professional and friendly";
 
     // Generate AI-powered response using OpenAI
     const response = await generateAIResponse({
@@ -90,42 +96,55 @@ serve(async (req) => {
       hotelName,
       brandVoice,
       isExternal: request.isExternal || false,
-      platform: request.platform
-    })
+      platform: request.platform,
+    });
 
-    // 🚨 PHASE 2: RISK ASSESSMENT FOR HUMAN-IN-LOOP APPROVAL
-    let requiresApproval = false
-    let approvalId = null
+    // Additional tone guardrails: if rating >= 4 and feedback contains clearly positive phrases,
+    // prevent apology language by prepending a tone directive for the prompt
+    // (handled inside createPrompt via RULES FOR TONE)
 
-    if (!request.isExternal) { // Only assess internal responses for now
+    // 🚨 PHASE 2: RISK ASSESSMENT FOR HUMAN-IN-LOOP APPROVAL (feature-flagged)
+    const humanInLoopEnabled =
+      (Deno.env.get("HUMAN_IN_LOOP_ENABLED") ?? "false").toLowerCase() ===
+        "true";
+    let requiresApproval = false;
+    let approvalId = null;
+
+    if (humanInLoopEnabled && !request.isExternal) { // Only assess internal responses when enabled
       try {
-        const riskAssessment = await supabase.functions.invoke('assess-response-risk', {
-          body: {
-            feedback_text: feedbackText,
-            rating: request.rating,
-            response_text: response,
-            tenant_id: request.tenant_id,
-            feedback_id: request.feedback_id || null
-          }
-        })
+        const riskAssessment = await supabase.functions.invoke(
+          "assess-response-risk",
+          {
+            body: {
+              feedback_text: feedbackText,
+              rating: request.rating,
+              response_text: response,
+              tenant_id: request.tenant_id,
+              feedback_id: request.feedback_id || null,
+            },
+          },
+        );
 
         if (riskAssessment.data?.assessment?.requires_approval) {
-          requiresApproval = true
+          requiresApproval = true;
 
           // Send approval notification
-          const notificationResult = await supabase.functions.invoke('send-approval-notification', {
-            body: {
-              approval_id: riskAssessment.data.approval_id,
-              tenant_id: request.tenant_id
-            }
-          })
+          const notificationResult = await supabase.functions.invoke(
+            "send-approval-notification",
+            {
+              body: {
+                approval_id: riskAssessment.data.approval_id,
+                tenant_id: request.tenant_id,
+              },
+            },
+          );
 
           if (notificationResult.data?.success) {
-            approvalId = riskAssessment.data.approval_id
+            approvalId = riskAssessment.data.approval_id;
           }
         }
       } catch (riskError) {
-        console.error('Risk assessment failed (non-critical):', riskError)
+        console.error("Risk assessment failed (non-critical):", riskError);
         // Continue with normal flow if risk assessment fails
       }
     }
@@ -136,90 +155,94 @@ serve(async (req) => {
         response: response,
         guest_name: guestName,
         rating: request.rating,
-        type: request.isExternal ? 'external_response' : 'guest_thank_you',
+        type: request.isExternal ? "external_response" : "guest_thank_you",
         requires_approval: requiresApproval,
         approval_id: approvalId,
-        status: requiresApproval ? 'pending_approval' : 'ready_to_send'
+        status: requiresApproval ? "pending_approval" : "ready_to_send",
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
-      }
-    )
-
+      },
+    );
   } catch (error) {
-    console.error('❌ AI response generation failed:', error)
+    console.error("❌ AI response generation failed:", error);
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message,
-        fallback_response: generateFallbackResponse()
+        fallback_response: generateFallbackResponse(),
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200, // Return 200 with fallback instead of error
-      }
-    )
+      },
+    );
   }
-})
+});
 
 /**
  * Generate AI-powered response using OpenAI
  */
 async function generateAIResponse(params: {
-  reviewText: string
-  rating: number
-  guestName: string
-  hotelName: string
-  brandVoice: string
-  isExternal: boolean
-  platform?: string
+  reviewText: string;
+  rating: number;
+  guestName: string;
+  hotelName: string;
+  brandVoice: string;
+  isExternal: boolean;
+  platform?: string;
 }): Promise<string> {
-  const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
-  
+  const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
+
   if (!openaiApiKey) {
-    console.warn('⚠️ OpenAI API key not found, using template response')
-    return generateTemplateResponse(params)
+    console.warn("⚠️ OpenAI API key not found, using template response");
+    return generateTemplateResponse(params);
   }
 
-  const prompt = createPrompt(params)
-  
+  const prompt = createPrompt(params);
+
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${openaiApiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'gpt-4o-2024-08-06',
+        model: "gpt-4o-2024-08-06",
         messages: [
           {
-            role: 'system',
-            content: `You are a professional hotel guest relations specialist. Generate ${params.isExternal ? 'public review responses' : 'personalized guest thank-you emails'} that are warm, genuine, concise, and ${params.brandVoice}. Keep to the requested structure and approximate word count.`
+            role: "system",
+            content:
+              `You are a professional hotel guest relations specialist. Generate ${
+                params.isExternal
+                  ? "public review responses"
+                  : "personalized guest thank-you emails"
+              } that are warm, genuine, concise, and ${params.brandVoice}. Keep to the requested structure and approximate word count.`,
           },
           {
-            role: 'user',
-            content: prompt
-          }
+            role: "user",
+            content: prompt,
+          },
         ],
         max_tokens: params.isExternal ? 250 : 320,
         temperature: 0.7,
         presence_penalty: 0.3,
-        frequency_penalty: 0.2
+        frequency_penalty: 0.2,
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const data = await response.json()
-    return data.choices[0]?.message?.content?.trim() || generateTemplateResponse(params)
-
+    const data = await response.json();
+    return data.choices[0]?.message?.content?.trim() ||
+      generateTemplateResponse(params);
   } catch (error) {
-    console.error('OpenAI API call failed:', error)
-    return generateTemplateResponse(params)
+    console.error("OpenAI API call failed:", error);
+    return generateTemplateResponse(params);
   }
 }
 
@@ -227,17 +250,19 @@ async function generateAIResponse(params: {
  * Create appropriate prompt based on context
  */
 function createPrompt(params: {
-  reviewText: string
-  rating: number
-  guestName: string
-  hotelName: string
-  brandVoice: string
-  isExternal: boolean
-  platform?: string
+  reviewText: string;
+  rating: number;
+  guestName: string;
+  hotelName: string;
+  brandVoice: string;
+  isExternal: boolean;
+  platform?: string;
 }): string {
   if (params.isExternal) {
     // External review response prompt
-    return `Generate a professional response to this ${params.platform || 'online'} review:
+    return `Generate a professional response to this ${
+      params.platform || "online"
+    } review:
 
 Guest: ${params.guestName}
 Rating: ${params.rating}/5 stars
@@ -248,13 +273,17 @@ Requirements:
 - Professional and ${params.brandVoice} tone
 - Address specific points mentioned in the review
 - Thank the guest for their feedback
-- ${params.rating <= 3 ? 'Acknowledge concerns and show commitment to improvement' : 'Express gratitude and invite them back'}
+- ${
+      params.rating <= 3
+        ? "Acknowledge concerns and show commitment to improvement"
+        : "Express gratitude and invite them back"
+    }
 - Keep under 200 words, 3 short paragraphs max
-- Sign as "${params.hotelName} Management Team"`
+- Sign as "${params.hotelName} Management Team"`;
   }
 
   // Internal guest thank-you email prompt (short, structured)
-  const issueAnalysis = analyzeIssues(params.reviewText, params.rating)
+  const issueAnalysis = analyzeIssues(params.reviewText, params.rating);
 
   return `Generate a warm, natural guest relations email response that flows like human-written correspondence.
 
@@ -262,156 +291,166 @@ Guest: ${params.guestName}
 Rating: ${params.rating}/5 stars
 Feedback: "${params.reviewText}"
 Hotel: ${params.hotelName}
-Issues identified: ${issueAnalysis.join(', ') || 'None'}
+Issues identified: ${issueAnalysis.join(", ") || "None"}
 
-EXAMPLE OF EXCELLENT EMAIL STRUCTURE (follow this natural flow):
-Dear Robert,
 
-Thank you very much for taking the time to share your feedback regarding your recent experience at Eusbett Hotel. We truly appreciate your 4-star rating and your valuable comments.
+  RULES FOR TONE AND CONTENT:
+  - If Rating >= 4 and the text is positive or neutral, DO NOT apologize. Write a concise, warm thank-you.
+  - If Rating <= 3 or text contains clearly negative issues, include a sincere, brief apology and a specific action statement.
+  - Never invent problems or apologize "just in case" if the sentiment is positive.
+  - Keep it concise and human; no AI/robotic phrasing.
 
-We are grateful for your honest input about the poor internet connection you experienced this morning. Please accept our apologies for any inconvenience this may have caused during your stay. We understand how important reliable internet access is for our guests, and we are currently working with our technical team to identify and resolve any connectivity issues to prevent this from happening again.
+  STRUCTURE (3 short paragraphs, 160-220 words):
+  - Start with: "Dear ${params.guestName},"
+  - 1) Thank them for their feedback and time
+  - 2) Address any clearly negative points (apologize ONLY if negative); otherwise, reinforce positives
+  - 3) Reiterate commitment and invite them back
+  - End with: "Warm regards,\n${params.hotelName} Team"
 
-Your comfort and satisfaction are our top priorities, and your feedback helps us to continually improve our service. We are delighted that you otherwise enjoyed your experience, and we look forward to welcoming you back to Eusbett Hotel in the future. Please let us know if there is anything we can do to make your next stay even better.
-
-Warm regards,
-Eusbett Hotel Team
-
-WRITE YOUR RESPONSE EXACTLY LIKE THIS EXAMPLE:
-- 3-4 substantial paragraphs (NOT single sentences)
-- Each paragraph should be 2-4 sentences long and flow naturally
-- Conversational, warm tone like the example above
-- 200-280 words total
-- Start with: "Dear ${params.guestName},"
-- First paragraph: Express gratitude for their feedback and time
-- Second paragraph: Address their specific concerns with empathy, apology, and action steps
-- Third paragraph: Reinforce commitment to service excellence and future relationship
-- End with: "Warm regards,\n${params.hotelName} Team"
-
-CRITICAL REQUIREMENTS:
-- Write in full, natural paragraphs - NOT bullet points or single sentences
-- Use connecting phrases like "We are grateful for...", "Please accept our apologies...", "We understand how..."
-- Make it sound like a human guest relations manager wrote it personally
-- Be specific about their feedback without being repetitive
-- Show genuine care and professionalism
-- NEVER mention compensation, refunds, or monetary offers
-
-Output: plain text only, formatted exactly like the example above.`
+  Output: plain text only, formatted exactly like the example above.`;
 }
 
 /**
  * Analyze feedback text for specific issues
  */
 function analyzeIssues(feedbackText: string, _rating: number): string[] {
-  const issues: string[] = []
-  const text = feedbackText.toLowerCase()
-  
+  const issues: string[] = [];
+  const text = feedbackText.toLowerCase();
+
   // Common hotel issues
-  if (text.includes('room') && (text.includes('dirty') || text.includes('clean'))) issues.push('room cleanliness')
-  if (text.includes('staff') && (text.includes('rude') || text.includes('unfriendly'))) issues.push('staff service')
-  if (text.includes('noise') || text.includes('loud')) issues.push('noise levels')
-  if (text.includes('wifi') || text.includes('internet')) issues.push('internet connectivity')
-  if (text.includes('breakfast') || text.includes('food')) issues.push('dining experience')
-  if (text.includes('check') && text.includes('in')) issues.push('check-in process')
-  if (text.includes('parking')) issues.push('parking')
-  if (text.includes('temperature') || text.includes('hot') || text.includes('cold')) issues.push('room temperature')
-  
-  return issues
+  if (
+    text.includes("room") && (text.includes("dirty") || text.includes("clean"))
+  ) issues.push("room cleanliness");
+  if (
+    text.includes("staff") &&
+    (text.includes("rude") || text.includes("unfriendly"))
+  ) issues.push("staff service");
+  if (text.includes("noise") || text.includes("loud")) {
+    issues.push("noise levels");
+  }
+  if (text.includes("wifi") || text.includes("internet")) {
+    issues.push("internet connectivity");
+  }
+  if (text.includes("breakfast") || text.includes("food")) {
+    issues.push("dining experience");
+  }
+  if (text.includes("check") && text.includes("in")) {
+    issues.push("check-in process");
+  }
+  if (text.includes("parking")) issues.push("parking");
+  if (
+    text.includes("temperature") || text.includes("hot") ||
+    text.includes("cold")
+  ) issues.push("room temperature");
+
+  return issues;
 }
 
 /**
  * Generate template response when AI is unavailable
  */
 function generateTemplateResponse(params: {
-  reviewText: string
-  rating: number
-  guestName: string
-  hotelName: string
-  isExternal: boolean
+  reviewText: string;
+  rating: number;
+  guestName: string;
+  hotelName: string;
+  isExternal: boolean;
 }): string {
   if (params.isExternal) {
     return `Dear ${params.guestName},
 
 Thank you for taking the time to share your review with us. Your feedback is invaluable to us as we continuously strive to improve our services.
 
-${params.rating >= 4 
-  ? "We're delighted to hear about your positive experience and hope to continue providing you with excellent service throughout your stay."
-  : "We sincerely apologize that your experience didn't meet expectations. We take all feedback seriously and are committed to making improvements."
-}
+${
+      params.rating >= 4
+        ? "We're delighted to hear about your positive experience and hope to continue providing you with excellent service throughout your stay."
+        : "We sincerely apologize that your experience didn't meet expectations. We take all feedback seriously and are committed to making improvements."
+    }
 
 Warm regards,
-The ${params.hotelName} Management Team`
+The ${params.hotelName} Management Team`;
   }
 
   return `Dear ${params.guestName},
 
 Thank you very much for taking the time to share your feedback regarding your recent experience at ${params.hotelName}. Your detailed comments are incredibly valuable to our team, and we appreciate you choosing to share your thoughts with us.
 
-${params.rating >= 4 
-  ? `We're absolutely thrilled to hear that you had such a positive experience during your stay. It's guests like you who make our work so rewarding, and we're grateful for your kind words about our service. Your feedback motivates our entire team to continue delivering exceptional hospitality.
+${
+    params.rating >= 4
+      ? `We're absolutely thrilled to hear that you had such a positive experience during your stay. It's guests like you who make our work so rewarding, and we're grateful for your kind words about our service. Your feedback motivates our entire team to continue delivering exceptional hospitality.
 
 Your comfort and satisfaction are our top priorities, and we're delighted that we were able to provide you with a memorable experience. We hope to have the pleasure of welcoming you back soon for another exceptional stay, and we look forward to continuing to exceed your expectations in the future.`
-  : `We sincerely apologize that your experience didn't meet the high standards we consistently strive to maintain at ${params.hotelName}. Please accept our apologies for any inconvenience this may have caused during your stay. We understand how important it is for our guests to have a comfortable and enjoyable experience, and we take full responsibility when we fall short of these expectations.
+      : `We sincerely apologize that your experience didn't meet the high standards we consistently strive to maintain at ${params.hotelName}. Please accept our apologies for any inconvenience this may have caused during your stay. We understand how important it is for our guests to have a comfortable and enjoyable experience, and we take full responsibility when we fall short of these expectations.
 
 Your feedback helps us identify specific areas where we can improve our service, and we're committed to making the necessary changes to ensure a much better experience for all our guests. We would welcome the opportunity to provide you with the exceptional service you deserve during a future visit, and we hope you'll give us another chance to demonstrate our commitment to excellence.`
-}
+  }
 
 Warm regards,
-The ${params.hotelName} Team`
+The ${params.hotelName} Team`;
 }
 
 /**
  * Generate AI-powered severity analysis for feedback
  */
 async function generateSeverityAnalysis(params: {
-  feedbackText: string
-  rating: number
-  guestName: string
-  issueCategory: string
-  roomNumber?: string
+  feedbackText: string;
+  rating: number;
+  guestName: string;
+  issueCategory: string;
+  roomNumber?: string;
 }): Promise<string> {
-  const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
-  
+  const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
+
   if (!openaiApiKey) {
-    console.warn('⚠️ OpenAI API key not found, using rule-based severity analysis')
-    return generateRuleBasedSeverityAnalysis(params.feedbackText, params.rating)
+    console.warn(
+      "⚠️ OpenAI API key not found, using rule-based severity analysis",
+    );
+    return generateRuleBasedSeverityAnalysis(
+      params.feedbackText,
+      params.rating,
+    );
   }
 
-  const prompt = createSeverityAnalysisPrompt(params)
-  
+  const prompt = createSeverityAnalysisPrompt(params);
+
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${openaiApiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'gpt-4o-2024-08-06',
+        model: "gpt-4o-2024-08-06",
         messages: [
           {
-            role: 'system',
-            content: 'You are a hotel guest experience analyst. Your job is to analyze guest feedback and determine severity levels for management escalation. Focus on safety, security, health violations, staff misconduct, discrimination, and serious operational failures.'
+            role: "system",
+            content:
+              "You are a hotel guest experience analyst. Your job is to analyze guest feedback and determine severity levels for management escalation. Focus on safety, security, health violations, staff misconduct, discrimination, and serious operational failures.",
           },
           {
-            role: 'user',
-            content: prompt
-          }
+            role: "user",
+            content: prompt,
+          },
         ],
         max_tokens: 200,
         temperature: 0.3,
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const data = await response.json()
-    return data.choices[0]?.message?.content?.trim() || generateRuleBasedSeverityAnalysis(params.feedbackText, params.rating)
-
+    const data = await response.json();
+    return data.choices[0]?.message?.content?.trim() ||
+      generateRuleBasedSeverityAnalysis(params.feedbackText, params.rating);
   } catch (error) {
-    console.error('OpenAI severity analysis failed:', error)
-    return generateRuleBasedSeverityAnalysis(params.feedbackText, params.rating)
+    console.error("OpenAI severity analysis failed:", error);
+    return generateRuleBasedSeverityAnalysis(
+      params.feedbackText,
+      params.rating,
+    );
   }
 }
 
@@ -419,16 +458,16 @@ async function generateSeverityAnalysis(params: {
  * Create severity analysis prompt
  */
 function createSeverityAnalysisPrompt(params: {
-  feedbackText: string
-  rating: number
-  guestName: string
-  issueCategory: string
-  roomNumber?: string
+  feedbackText: string;
+  rating: number;
+  guestName: string;
+  issueCategory: string;
+  roomNumber?: string;
 }): string {
   return `Analyze this hotel guest feedback for severity level and escalation requirements:
 
 Guest: ${params.guestName}
-Room: ${params.roomNumber || 'N/A'}
+Room: ${params.roomNumber || "N/A"}
 Rating: ${params.rating}/5 stars
 Category: ${params.issueCategory}
 Feedback: "${params.feedbackText}"
@@ -447,35 +486,59 @@ Respond with exactly this format:
 SEVERITY: [HIGH/MEDIUM/LOW]
 GM_ESCALATION: [YES/NO]
 REASON: [Brief explanation in one sentence]
-KEYWORDS: [List any serious issue keywords found]`
+KEYWORDS: [List any serious issue keywords found]`;
 }
 
 /**
  * Generate rule-based severity analysis when AI is unavailable
  */
-function generateRuleBasedSeverityAnalysis(feedbackText: string, rating: number): string {
-  const text = feedbackText.toLowerCase()
-  
+function generateRuleBasedSeverityAnalysis(
+  feedbackText: string,
+  rating: number,
+): string {
+  const text = feedbackText.toLowerCase();
+
   const criticalKeywords = [
-    'safety', 'security', 'mold', 'bed bugs', 'harassment', 'assault', 'theft',
-    'discrimination', 'inappropriate', 'legal', 'lawsuit', 'danger', 'emergency',
-    'health violation', 'food poisoning', 'misconduct'
-  ]
-  
-  const foundKeywords = criticalKeywords.filter(keyword => text.includes(keyword))
-  const hasHighRisk = foundKeywords.length > 0
-  
-  let severity = 'LOW'
+    "safety",
+    "security",
+    "mold",
+    "bed bugs",
+    "harassment",
+    "assault",
+    "theft",
+    "discrimination",
+    "inappropriate",
+    "legal",
+    "lawsuit",
+    "danger",
+    "emergency",
+    "health violation",
+    "food poisoning",
+    "misconduct",
+  ];
+
+  const foundKeywords = criticalKeywords.filter((keyword) =>
+    text.includes(keyword)
+  );
+  const hasHighRisk = foundKeywords.length > 0;
+
+  let severity = "LOW";
   if (hasHighRisk) {
-    severity = 'HIGH'
+    severity = "HIGH";
   } else if (rating <= 2) {
-    severity = 'MEDIUM'
+    severity = "MEDIUM";
   }
-  
+
   return `SEVERITY: ${severity}
-GM_ESCALATION: ${hasHighRisk ? 'YES' : 'NO'}
-REASON: ${hasHighRisk ? 'Contains serious safety/security/health concerns' : rating <= 2 ? 'Low rating requiring attention' : 'Standard feedback'}
-KEYWORDS: ${foundKeywords.join(', ') || 'None'}`
+GM_ESCALATION: ${hasHighRisk ? "YES" : "NO"}
+REASON: ${
+    hasHighRisk
+      ? "Contains serious safety/security/health concerns"
+      : rating <= 2
+      ? "Low rating requiring attention"
+      : "Standard feedback"
+  }
+KEYWORDS: ${foundKeywords.join(", ") || "None"}`;
 }
 
 /**
@@ -491,5 +554,5 @@ Your comments help us continuously improve our services, and we're grateful for 
 We hope to have the opportunity to welcome you back soon.
 
 Warm regards,
-The Guest Relations Team`
+The Guest Relations Team`;
 }

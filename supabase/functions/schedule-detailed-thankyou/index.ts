@@ -1,102 +1,215 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 interface ScheduleDetailedThankYouRequest {
-  feedback_id: string
-  guest_name: string
-  guest_email: string
-  room_number?: string
-  rating: number
-  feedback_text: string
-  issue_category?: string
-  tenant_id: string
-  tenant_slug: string
-  delay_minutes?: number // Default to 3 minutes for testing, 15 for production
+  feedback_id: string;
+  guest_name: string;
+  guest_email: string;
+  room_number?: string;
+  rating: number;
+  feedback_text: string;
+  issue_category?: string;
+  tenant_id: string;
+  tenant_slug: string;
+  delay_minutes?: number; // Default to 3 minutes for testing, 15 for production
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
 
-    const request: ScheduleDetailedThankYouRequest = await req.json()
-    console.log('📅 Scheduling detailed thank you email for:', {
+    const request: ScheduleDetailedThankYouRequest = await req.json();
+    console.log("📅 Scheduling detailed thank you email for:", {
       feedback_id: request.feedback_id,
       guest: request.guest_name,
       rating: request.rating,
-      delay_minutes: request.delay_minutes || 3
-    })
+      delay_minutes: request.delay_minutes || 3,
+    });
+
+    // Feature flag to bypass human-in-loop gating when disabled
+    const humanInLoopEnabled =
+      (Deno.env.get("HUMAN_IN_LOOP_ENABLED") ?? "false").toLowerCase() ===
+        "true";
+
+    if (humanInLoopEnabled) {
+      // PHASE 1: SECURITY CHECK BEFORE GENERATION (fail closed)
+      const feedbackLower = (request.feedback_text || "").toLowerCase();
+      const HIGH_RISK_KEYWORDS = [
+        "food poisoning",
+        "poisoning",
+        "poison",
+        "food poinsing",
+        "stolen",
+        "theft",
+        "robbed",
+        "burglar",
+        "missing jewelry",
+        "jewels",
+        "assault",
+        "attack",
+        "violence",
+        "abuse",
+        "harassment",
+        "lawsuit",
+        "legal action",
+        "sue",
+        "lawyer",
+        "attorney",
+        "discrimination",
+        "racist",
+        "sexist",
+        "homophobic",
+        "injury",
+        "hurt",
+        "hospital",
+        "ambulance",
+        "medical emergency",
+        "fire",
+        "smoke",
+        "gas leak",
+        "carbon monoxide",
+        "bed bugs",
+        "cockroach",
+        "rat",
+        "mouse",
+        "infestation",
+      ];
+      const hasDangerousKeyword = HIGH_RISK_KEYWORDS.some((k) =>
+        feedbackLower.includes(k)
+      );
+      const isLowRating = (request.rating ?? 5) <= 2;
+      if (hasDangerousKeyword || isLowRating) {
+        console.log(
+          "🛑 Dangerous content or low rating detected - requiring human approval (do not schedule)",
+        );
+        const { data: insertRow, error: insertError } = await supabase
+          .from("response_approvals")
+          .insert({
+            feedback_id: request.feedback_id,
+            tenant_id: request.tenant_id,
+            generated_response: "",
+            response_type: "guest_response",
+            severity_level: "HIGH",
+            risk_factors: [
+              ...(hasDangerousKeyword ? ["Dangerous keyword detected"] : []),
+              ...(isLowRating ? ["Low rating (<=2 stars)"] : []),
+            ],
+            ai_confidence_score: 0.9,
+            risk_explanation:
+              "Security trigger words or low rating detected. Human approval required before sending.",
+            requires_approval: true,
+            status: "pending",
+          })
+          .select("id")
+          .single();
+        if (insertError) throw insertError;
+        try {
+          await supabase.functions.invoke("send-approval-notification", {
+            body: { approval_id: insertRow?.id, tenant_id: request.tenant_id },
+          });
+        } catch (notifyErr) {
+          console.error("⚠️ Approval notification failed:", notifyErr);
+        }
+        return new Response(
+          JSON.stringify({
+            success: false,
+            reason: "pending_approval",
+            message:
+              "Detailed thank you not scheduled - awaiting human approval",
+            feedback_id: request.feedback_id,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    } // end if (humanInLoopEnabled)
 
     // Only schedule if guest provided email
     if (!request.guest_email) {
-      console.log('⚠️ No guest email provided, skipping detailed thank you scheduling')
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'No guest email provided, detailed thank you skipped',
-        feedback_id: request.feedback_id
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      console.log(
+        "⚠️ No guest email provided, skipping detailed thank you scheduling",
+      );
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "No guest email provided, detailed thank you skipped",
+          feedback_id: request.feedback_id,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Check if we already scheduled a detailed thank you for this feedback
     const { data: existingSchedule } = await supabase
-      .from('email_queue')
-      .select('id')
-      .eq('metadata->>feedback_id', request.feedback_id)
-      .eq('email_type', 'detailed_thankyou')
-      .single()
+      .from("email_queue")
+      .select("id")
+      .eq("metadata->>feedback_id", request.feedback_id)
+      .eq("email_type", "detailed_thankyou")
+      .single();
 
     if (existingSchedule) {
-      console.log('⚠️ Detailed thank you already scheduled for this feedback')
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Detailed thank you already scheduled',
-        feedback_id: request.feedback_id,
-        existing_schedule_id: existingSchedule.id
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      console.log("⚠️ Detailed thank you already scheduled for this feedback");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Detailed thank you already scheduled",
+          feedback_id: request.feedback_id,
+          existing_schedule_id: existingSchedule.id,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Generate the detailed thank you content using AI-powered generator
-    const { data: thankYouData, error: thankYouError } = await supabase.functions.invoke('ai-response-generator', {
-      body: {
-        reviewText: request.feedback_text,
-        rating: request.rating,
-        isExternal: false,
-        guestName: request.guest_name,
-        tenant_id: request.tenant_id,
-        tenant_slug: request.tenant_slug
-      }
-    })
+    const { data: thankYouData, error: thankYouError } = await supabase
+      .functions.invoke("ai-response-generator", {
+        body: {
+          reviewText: request.feedback_text,
+          rating: request.rating,
+          isExternal: false,
+          guestName: request.guest_name,
+          tenant_id: request.tenant_id,
+          tenant_slug: request.tenant_slug,
+        },
+      });
 
     if (thankYouError) {
-      console.error('Failed to generate thank you content:', thankYouError)
-      throw new Error(`Thank you generation failed: ${thankYouError.message}`)
+      console.error("Failed to generate thank you content:", thankYouError);
+      throw new Error(`Thank you generation failed: ${thankYouError.message}`);
     }
 
     // Calculate scheduled time (3 minutes default for testing, 15 for production)
     // Respect explicit 0 for immediate scheduling
-    const delayMinutes = (request.delay_minutes !== undefined) ? request.delay_minutes : 3
-    const scheduledFor = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString()
+    const delayMinutes = (request.delay_minutes !== undefined)
+      ? request.delay_minutes
+      : 3;
+    const scheduledFor = new Date(Date.now() + delayMinutes * 60 * 1000)
+      .toISOString();
 
     // Create email HTML content
-    const hotelName = request.tenant_slug.charAt(0).toUpperCase() + request.tenant_slug.slice(1) + ' Hotel'
-    const subject = `Thank You for Your Feedback - ${hotelName}`
-    
+    const hotelName = request.tenant_slug.charAt(0).toUpperCase() +
+      request.tenant_slug.slice(1) + " Hotel";
+    const subject = `Thank You for Your Feedback - ${hotelName}`;
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -120,12 +233,12 @@ serve(async (req) => {
             <h1>Thank You for Your Feedback</h1>
             <p>${hotelName}</p>
           </div>
-          
+
           <div class="content">
             <div style="white-space: pre-line;">
               ${thankYouData.response}
             </div>
-            
+
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
               <p style="color: #999; font-size: 11px; line-height: 1.4; margin: 0;">
                 This email was sent by GuestGlow (DreamPath Ltd) on behalf of ${hotelName}.<br>
@@ -137,39 +250,40 @@ serve(async (req) => {
         </div>
       </body>
       </html>
-    `
+    `;
 
     // Schedule the email in the queue
-    const { data: queueResult, error: queueError } = await supabase.functions.invoke('email-queue', {
-      body: {
-        action: 'add',
-        email_data: {
-          email_type: 'detailed_thankyou',
-          recipient_email: request.guest_email,
-          subject: subject,
-          html_content: htmlContent,
-          tenant_id: request.tenant_id,
-          tenant_slug: request.tenant_slug,
-          priority: 'normal',
-          scheduled_for: scheduledFor,
-          feedback_id: request.feedback_id
-        }
-      }
-    })
+    const { data: queueResult, error: queueError } = await supabase.functions
+      .invoke("email-queue", {
+        body: {
+          action: "add",
+          email_data: {
+            email_type: "detailed_thankyou",
+            recipient_email: request.guest_email,
+            subject: subject,
+            html_content: htmlContent,
+            tenant_id: request.tenant_id,
+            tenant_slug: request.tenant_slug,
+            priority: "normal",
+            scheduled_for: scheduledFor,
+            feedback_id: request.feedback_id,
+          },
+        },
+      });
 
     if (queueError) {
-      console.error('Failed to schedule detailed thank you email:', queueError)
-      throw new Error(`Email scheduling failed: ${queueError.message}`)
+      console.error("Failed to schedule detailed thank you email:", queueError);
+      throw new Error(`Email scheduling failed: ${queueError.message}`);
     }
 
     // Log the scheduling
     await supabase
-      .from('system_logs')
+      .from("system_logs")
       .insert({
         tenant_id: request.tenant_id,
-        event_type: 'system_event',
-        event_category: 'detailed_thankyou',
-        event_name: 'detailed_thankyou_scheduled',
+        event_type: "system_event",
+        event_category: "detailed_thankyou",
+        event_name: "detailed_thankyou_scheduled",
         event_data: {
           feedback_id: request.feedback_id,
           guest_name: request.guest_name,
@@ -178,39 +292,44 @@ serve(async (req) => {
           rating: request.rating,
           issue_category: request.issue_category,
           scheduled_for: scheduledFor,
-          delay_minutes: delayMinutes
+          delay_minutes: delayMinutes,
         },
-        severity: 'info'
-      })
+        severity: "info",
+      });
 
-    console.log('✅ Detailed thank you email scheduled successfully:', {
+    console.log("✅ Detailed thank you email scheduled successfully:", {
       feedback_id: request.feedback_id,
       guest_email: request.guest_email,
       scheduled_for: scheduledFor,
-      queue_id: queueResult?.queue_id
-    })
+      queue_id: queueResult?.queue_id,
+    });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Detailed thank you email scheduled successfully',
-      feedback_id: request.feedback_id,
-      scheduled_for: scheduledFor,
-      delay_minutes: delayMinutes,
-      queue_id: queueResult?.queue_id
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Detailed thank you email scheduled successfully",
+        feedback_id: request.feedback_id,
+        scheduled_for: scheduledFor,
+        delay_minutes: delayMinutes,
+        queue_id: queueResult?.queue_id,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
-    console.error('❌ Failed to schedule detailed thank you email:', error)
-    
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
+    console.error("❌ Failed to schedule detailed thank you email:", error);
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
-})
+});

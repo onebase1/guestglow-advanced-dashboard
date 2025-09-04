@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LoadingState } from "@/components/ui/loading-state"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
-import { getCurrentUserTenant, getTenantBySlug, validateTenantAccess, type Tenant, DEFAULT_TENANT } from "@/utils/tenant"
+import { getCurrentUserTenant, getTenantBySlug, validateTenantComplete, type Tenant, DEFAULT_TENANT } from "@/utils/tenant"
 import { DashboardStats } from "@/components/DashboardStats"
 import { DashboardContent } from "@/components/DashboardTabs"
 import { AppSidebar } from "@/components/AppSidebar"
@@ -60,7 +60,7 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useAuth()
   const { tenantSlug } = useParams<{ tenantSlug?: string }>()
   const [searchParams] = useSearchParams()
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "internal")
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "internal") // default to list view
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentFeedback, setRecentFeedback] = useState<RecentFeedback[]>([])
   const [externalReviews, setExternalReviews] = useState<ExternalReview[]>([])
@@ -88,7 +88,8 @@ export default function Dashboard() {
         if (tenantData) {
           // If user is authenticated, validate they have access to this tenant
           if (user) {
-            const hasAccess = await validateTenantAccess(tenantData.id)
+            const validation = await validateTenantComplete(targetTenantSlug, user.id)
+            const hasAccess = !!validation?.hasAccess
             if (!hasAccess) {
               console.warn(`User ${user.email} does not have access to tenant ${targetTenantSlug}`)
               // For testing, we'll allow access anyway
@@ -301,6 +302,7 @@ export default function Dashboard() {
 
   const bottomNavItems = [
     { id: 'internal', title: 'Reviews', icon: MessageSquare, isActive: activeTab === 'internal', onClick: () => setActiveTab('internal') },
+    { id: 'workflow', title: 'Workflow', icon: Eye, isActive: activeTab === 'workflow', onClick: () => setActiveTab('workflow') },
     { id: 'external', title: 'Monitor', icon: Eye, isActive: activeTab === 'external', onClick: () => setActiveTab('external') },
     { id: 'analytics', title: 'Analytics', icon: BarChart3, isActive: activeTab === 'analytics', onClick: () => setActiveTab('analytics') },
     { id: 'settings', title: 'Settings', icon: Settings, isActive: activeTab === 'settings', onClick: () => setActiveTab('settings') },

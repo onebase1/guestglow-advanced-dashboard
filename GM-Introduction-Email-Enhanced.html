@@ -59,6 +59,11 @@
             background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
             border-left-color: #16a34a;
         }
+        .ratings-section {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border-left-color: #f59e0b;
+        }
+
         .feature-title {
             font-size: 20px;
             font-weight: 600;
@@ -95,8 +100,9 @@
             font-weight: bold;
         }
         .cta-section {
-            background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
-            color: white;
+            background-color: #8B4513; /* fallback for clients that ignore gradients */
+            background-image: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+            color: #ffffff;
             padding: 30px;
             text-align: center;
             margin: 30px 0;
@@ -141,54 +147,56 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🏨 Welcome to GuestGlow</h1>
-            <p>Advanced Guest Experience Management Platform</p>
-            <div style="margin-top: 20px;">
-                <span class="metric">🎯 4.5⭐ Rating Goal</span>
-                <span class="metric">🛡️ AI Security Detection</span>
-                <span class="metric">📊 Real-time Analytics</span>
+        <div class="header" style="background-color:#8B4513;background:linear-gradient(135deg,#8B4513 0%, #A0522D 100%);color:#ffffff;padding:40px 30px;text-align:center;">
+            <h1 style="margin:0;font-size:28px;font-weight:600;text-shadow:0 2px 4px rgba(0,0,0,0.2);">Welcome to GuestGlow</h1>
+            <p style="margin:10px 0 0 0;opacity:0.95;font-size:16px;">Advanced Guest Experience Management Platform</p>
+            <div style="margin-top:20px;">
+                <span style="display:inline-block;background:rgba(255,255,255,0.2);padding:10px 15px;border-radius:6px;margin:5px;font-weight:600;color:#ffffff;">4.5★ Rating Goal</span>
+                <span style="display:inline-block;background:rgba(255,255,255,0.2);padding:10px 15px;border-radius:6px;margin:5px;font-weight:600;color:#ffffff;">AI Security Detection</span>
+                <span style="display:inline-block;background:rgba(255,255,255,0.2);padding:10px 15px;border-radius:6px;margin:5px;font-weight:600;color:#ffffff;">Real-time Analytics</span>
             </div>
         </div>
 
         <div class="content">
-            <p style="font-size: 18px; color: #8B4513; font-weight: 600;">Dear Hotel General Manager,</p>
-            
+            <p style="font-size: 18px; color: #8B4513; font-weight: 600;">Dear Robert,</p>
+            <p style="color: #ffffff; margin: 0;">GuestGlow invisible marker: evaluation copy</p>
+
             <p>Congratulations! Your hotel is now equipped with <strong>GuestGlow's enterprise-grade guest experience management platform</strong>. You now have access to the same advanced systems used by luxury hotel chains worldwide.</p>
 
             <!-- SECURITY DETECTION SHOWCASE -->
             <div class="feature-section security-section">
                 <div class="feature-title">
-                    <span style="font-size: 24px;">🛡️</span>
+                    <span style="font-size: 24px; display: inline-block; margin-right: 8px;">Security</span>
                     <span>AI-Powered Security Detection System</span>
                 </div>
                 <p><strong>Industry-leading protection</strong> that automatically detects and escalates serious guest concerns before they become public relations disasters.</p>
-                
+
                 <ul class="feature-list">
-                    <li><span class="alert-icon">🚨</span> <strong>Legal/Compliance Threats</strong> - Discrimination, harassment, explicit legal threats</li>
+                    <li><strong>Legal/Compliance Threats</strong> - Discrimination, harassment, explicit legal threats</li>
                     <li><span class="alert-icon">⚕️</span> <strong>Health & Safety Critical</strong> - Food poisoning, injuries requiring medical attention</li>
                     <li><span class="alert-icon">👮</span> <strong>Staff Misconduct Detection</strong> - Theft, inappropriate behavior, corruption allegations</li>
                     <li><span class="alert-icon">🔒</span> <strong>Security Incidents</strong> - Assault, unauthorized access, weapons on property</li>
                     <li><span class="alert-icon">📺</span> <strong>Media/Reputation Threats</strong> - Viral social media posts, boycott campaigns</li>
                     <li><span class="alert-icon">🤖</span> <strong>System Bypass Detection</strong> - AI manipulation attempts, prompt injection</li>
                 </ul>
-                
+
                 <p style="background: rgba(220, 38, 38, 0.1); padding: 15px; border-radius: 6px; margin-top: 15px;">
-                    <strong>🎯 Human-in-the-Loop Protection:</strong> High-risk responses are automatically held for your approval and sent to <span class="highlight">basera@btinternet.com</span> and <span class="highlight">g.basera@yahoo.com</span> before any automated response goes out.
+                    <strong>🎯 Human-in-the-Loop Protection:</strong> High-risk responses are automatically held for approval and routed to <span class="highlight">guestrelations@eusbetthotel.com</span> and <span class="highlight">security@guest-glow.com</span> before any automated response goes out.<br>
+                    <span style="color:#6b7280;">Security notifications are handled by our monitored address <strong>security@guest-glow.com</strong>.</span>
                 </p>
             </div>
 
             <!-- ANALYTICS SHOWCASE -->
             <div class="feature-section analytics-section">
                 <div class="feature-title">
-                    <span style="font-size: 24px;">📊</span>
+                    <span style="font-size: 24px; display: inline-block; margin-right: 8px;">Analytics</span>
                     <span>Executive Analytics Dashboard</span>
                 </div>
                 <p><strong>Real-time insights</strong> delivered directly to your inbox with actionable intelligence for strategic decision-making.</p>
-                
+
                 <ul class="feature-list">
-                    <li><span class="info-icon">🌅</span> <strong>Daily Morning Briefings</strong> - Overnight feedback, issues needing attention, strategic focus areas</li>
-                    <li><span class="info-icon">🚨</span> <strong>Critical Alert System</strong> - Immediate notifications for 3⭐ and below ratings with escalation contacts</li>
+                    <li><strong>Daily Morning Briefings</strong> - Overnight feedback, issues needing attention, strategic focus areas</li>
+                    <li><strong>Critical Alert System</strong> - Immediate notifications for 3★ and below ratings with escalation contacts</li>
                     <li><span class="info-icon">📈</span> <strong>Weekly Performance Reports</strong> - Rating progress, department analysis, conversion tracking</li>
                     <li><span class="info-icon">🎯</span> <strong>Strategic Target Monitoring</strong> - Progress toward 4.5⭐ goal with 5⭐ conversion tracking</li>
                     <li><span class="info-icon">🔍</span> <strong>Near-Miss Detection</strong> - Identify guests who gave 5⭐ internally but didn't review externally</li>
@@ -199,14 +207,48 @@
             <!-- AUTOMATION SHOWCASE -->
             <div class="feature-section automation-section">
                 <div class="feature-title">
-                    <span style="font-size: 24px;">⚡</span>
+                    <span style="font-size: 24px;">Automation</span>
                     <span>Intelligent Automation Suite</span>
                 </div>
                 <p><strong>24/7 automated operations</strong> that work while you sleep, ensuring no guest concern goes unaddressed.</p>
-                
+
                 <ul class="feature-list">
                     <li><span class="check-icon">✅</span> <strong>Instant Guest Responses</strong> - Professional, personalized emails within 3 minutes</li>
                     <li><span class="check-icon">✅</span> <strong>Manager Alert System</strong> - Department heads notified automatically based on feedback category</li>
+            <!-- TRIPADVISOR SNAPSHOT -->
+            <div class="feature-section ratings-section">
+                <div class="feature-title" style="color:#00A680;">
+                    <span style="font-size: 24px; display: inline-block; margin-right: 8px; color:#00A680;">TripAdvisor</span>
+                    <span>Current Public Rating Snapshot</span>
+                </div>
+                <p style="margin-top:0">Live metrics retrieved from TripAdvisor and stored in our database for auditing.</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+                    <tr>
+                        <td style="padding:8px 6px;border-bottom:1px solid rgba(0,0,0,0.08);"><strong>Overall Rating</strong></td>
+                        <td style="padding:8px 6px;border-bottom:1px solid rgba(0,0,0,0.08);">4.0</td>
+                        <td style="padding:8px 6px;border-bottom:1px solid rgba(0,0,0,0.08);"><strong>Total Reviews</strong></td>
+                        <td style="padding:8px 6px;border-bottom:1px solid rgba(0,0,0,0.08);">140</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 6px;">Excellent (5★)</td>
+                        <td style="padding:8px 6px;">60</td>
+                        <td style="padding:8px 6px;">Good (4★)</td>
+                        <td style="padding:8px 6px;">43</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 6px;">Average (3★)</td>
+                        <td style="padding:8px 6px;">21</td>
+                        <td style="padding:8px 6px;">Poor (2★)</td>
+                        <td style="padding:8px 6px;">5</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 6px;">Terrible (1★)</td>
+                        <td style="padding:8px 6px;">11</td>
+                        <td style="padding:8px 6px; color:#6b7280;" colspan="2">Source: tripadvisor_scrapes (last update: 2025-09-03)</td>
+                    </tr>
+                </table>
+            </div>
+
                     <li><span class="check-icon">✅</span> <strong>5⭐ Conversion Flow</strong> - Automatic TripAdvisor review requests for satisfied guests</li>
                     <li><span class="check-icon">✅</span> <strong>SLA Monitoring</strong> - Escalation system ensures timely responses to all feedback</li>
                     <li><span class="check-icon">✅</span> <strong>External Review Monitoring</strong> - Daily TripAdvisor scraping with rating drop alerts</li>
@@ -215,10 +257,10 @@
             </div>
 
             <div class="cta-section">
-                <h3 style="margin-top: 0;">🎯 Your 6-Month Goal: 4.0⭐ → 4.5⭐</h3>
-                <p>With GuestGlow's advanced analytics and automation, you'll receive daily progress reports, strategic recommendations, and early warning systems to achieve your rating uplift goal.</p>
-                <p><strong>Expected Impact:</strong> 298 additional 5⭐ reviews (~2 per day) with comprehensive tracking and optimization.</p>
-                <a href="mailto:g.basera@yahoo.com?subject=GuestGlow%20GM%20Dashboard%20Access" class="cta-button">
+                <h3 style="margin-top: 0; color:#ffffff;">Your 6‑Month Goal: 4.0★ → 4.5★</h3>
+                <p style="color:#f9fafb;opacity:0.95;">With GuestGlow's advanced analytics and automation, you'll receive daily progress reports, strategic recommendations, and early warning systems to achieve your rating uplift goal.</p>
+                <p style="color:#f3f4f6;"><strong style="color:#ffffff;">Expected Impact:</strong> 298 additional 5★ reviews (~2 per day) with comprehensive tracking and optimization.</p>
+                <a href="https://wzfpltamwhkncxjvulik.supabase.co/functions/v1/request-dashboard-access" class="cta-button" target="_blank" rel="noopener">Request Dashboard Access</a>
                     Request Dashboard Access
                 </a>
             </div>

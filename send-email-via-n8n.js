@@ -15,7 +15,7 @@ const N8N_CONFIG = {
 
 // Email data for the preview
 const PREVIEW_EMAIL_DATA = {
-  recipient_email: 'g.basera5@gmail.com',
+  recipient_email: 'gizzy@guest-glow.com',
   subject: '[PREVIEW - QUALITY CHECK] GuestGlow Advanced Analytics - System Introduction for Eusbett Hotel',
   html_content: `<!DOCTYPE html>
 <html lang="en">
@@ -123,17 +123,17 @@ const PREVIEW_EMAIL_DATA = {
 
         <p>With 278 five-star external reviews needed over 6 months, every optimization matters. This system ensures you do not miss opportunities and can course-correct quickly when needed.</p>
 
-        <p>I am confident this will provide the competitive edge Eusbett Hotel needs to achieve and maintain a 4.5-star rating.</p>
+        <h3>Executive Recap</h3>
+        <p>GuestGlow equips Eusbett Hotel with: (1) proactive security detection for high‑risk guest issues, (2) real‑time analytics with daily and weekly GM reports, and (3) a conversion system that turns internal 5★ feedback into public TripAdvisor reviews. Baseline today (TripAdvisor): 4.0 from 139 reviews [5★ 59, 4★ 43, 3★ 21, 2★ 5, 1★ 11]. Target: 4.5 within 6 months.</p>
 
-        <p><strong>Looking forward to your feedback and questions!</strong></p>
+        <p><strong>Looking forward to your feedback and questions.</strong></p>
 
         <p>Best regards,<br>
-        <strong>Gizzy Basera</strong><br>
-        GuestGlow Advanced Analytics<br>
-        <a href="mailto:g.basera5@gmail.com">g.basera5@gmail.com</a></p>
+        <strong>GuestGlow Team</strong><br>
+        <a href="mailto:gizzy@guest-glow.com">gizzy@guest-glow.com</a></p>
 
         <div class="footer">
-            <p>Production email will be sent to: gm@eusbetthotel.com, erbennet@gmail.com</p>
+            <p>Planned recipients: gm@eusbetthotel.com (GM), erbennett@gmail.com (Project Sponsor)</p>
             <p>System monitoring: gizzy@guest-glow.com (BCC)</p>
             <p>GuestGlow Advanced Analytics • Intelligent Guest Experience Management</p>
         </div>

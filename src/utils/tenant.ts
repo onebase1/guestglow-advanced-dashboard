@@ -285,14 +285,27 @@ export const validateTenantComplete = async (
     });
 
     if (error) throw error;
-    return data;
-  } catch (error) {
+
+    // The RPC returns snake_case keys; normalize to camelCase
+    const payload: any = (data && (data as any).validate_tenant_complete)
+      ? (data as any).validate_tenant_complete
+      : data;
+
+    return {
+      success: !!payload?.success,
+      tenantExists: !!payload?.tenant_exists,
+      hasAccess: !!payload?.has_access,
+      tenant: payload?.tenant ?? undefined,
+      userRoles: payload?.user_roles ?? undefined,
+      error: payload?.error ?? undefined,
+    };
+  } catch (error: any) {
     console.error('Tenant validation error:', error);
     return {
       success: false,
       tenantExists: false,
       hasAccess: false,
-      error: error.message
+      error: error?.message ?? 'Unknown validation error'
     };
   }
 };

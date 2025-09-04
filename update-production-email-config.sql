@@ -1,12 +1,22 @@
+-- Create table for GM dashboard access requests
+CREATE TABLE IF NOT EXISTS public.gm_access_requests (
+  id UUID PRIMARY KEY,
+  tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  manager_email TEXT NOT NULL,
+  manager_name TEXT,
+  note TEXT,
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- 🚀 PRODUCTION EMAIL CONFIGURATION UPDATE
--- Run this SQL in your Supabase SQL editor to update all email recipients 
+-- Run this SQL in your Supabase SQL editor to update all email recipients
 -- from test emails to production-ready structure
 
 -- ================================
 -- 1. UPDATE TENANT CONTACT EMAIL
 -- ================================
 
-UPDATE public.tenants 
+UPDATE public.tenants
 SET contact_email = 'guestrelations@eusbetthotel.com'
 WHERE slug = 'eusbett';
 
@@ -15,7 +25,7 @@ WHERE slug = 'eusbett';
 -- ================================
 
 -- Remove old complex manager structure
-DELETE FROM public.manager_configurations 
+DELETE FROM public.manager_configurations
 WHERE tenant_id = (SELECT id FROM public.tenants WHERE slug = 'eusbett');
 
 -- ================================
@@ -28,39 +38,39 @@ DECLARE
 BEGIN
   -- Get Eusbett tenant ID
   SELECT id INTO eusbett_tenant_id FROM public.tenants WHERE slug = 'eusbett';
-  
+
   IF eusbett_tenant_id IS NOT NULL THEN
     -- Insert simplified 3-person structure
     INSERT INTO public.manager_configurations (tenant_id, name, email, department, title, is_primary, is_active)
-    VALUES 
+    VALUES
       (eusbett_tenant_id, 'Guest Relations Team', 'guestrelations@eusbetthotel.com', 'Guest Relations', 'Guest Relations Manager', true, true),
       (eusbett_tenant_id, 'General Manager', 'gm@eusbetthotel.com', 'Management', 'General Manager', false, true),
       (eusbett_tenant_id, 'Edward Bennett', 'erbennett@gmail.com', 'Management', 'Operations Director', false, true)
     ON CONFLICT DO NOTHING;
-    
+
     -- Update category routing to use Guest Relations as primary
-    UPDATE public.category_routing_configurations 
+    UPDATE public.category_routing_configurations
     SET manager_id = (
-      SELECT id FROM public.manager_configurations 
-      WHERE tenant_id = eusbett_tenant_id AND is_primary = true 
+      SELECT id FROM public.manager_configurations
+      WHERE tenant_id = eusbett_tenant_id AND is_primary = true
       LIMIT 1
     ),
     auto_escalation_hours = 4  -- Standard 4-hour escalation window
     WHERE tenant_id = eusbett_tenant_id;
-    
+
     -- If no category routing exists, create default ones for new categories
     INSERT INTO public.category_routing_configurations (
-      tenant_id, 
-      feedback_category, 
-      manager_id, 
+      tenant_id,
+      feedback_category,
+      manager_id,
       auto_escalation_hours,
       is_active
     )
-    SELECT 
+    SELECT
       eusbett_tenant_id,
       unnest(ARRAY[
         'Conferences/Meetings',
-        'Internet', 
+        'Internet',
         'Spa',
         'Gym',
         'Security',
@@ -82,7 +92,7 @@ BEGIN
       manager_id = EXCLUDED.manager_id,
       auto_escalation_hours = EXCLUDED.auto_escalation_hours,
       is_active = EXCLUDED.is_active;
-      
+
   END IF;
 END $$;
 
@@ -91,8 +101,8 @@ END $$;
 -- ================================
 
 -- Check tenant contact email
-SELECT name, slug, contact_email 
-FROM public.tenants 
+SELECT name, slug, contact_email
+FROM public.tenants
 WHERE slug = 'eusbett';
 
 -- Check manager configurations
@@ -103,7 +113,7 @@ WHERE t.slug = 'eusbett'
 ORDER BY is_primary DESC, title;
 
 -- Check category routing
-SELECT 
+SELECT
   crc.feedback_category,
   mc.name as manager_name,
   mc.email as manager_email,

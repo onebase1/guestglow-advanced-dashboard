@@ -1,36 +1,43 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
 
-    const url = new URL(req.url)
-    const token = url.searchParams.get('token')
-    const action = url.searchParams.get('action')
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token");
+    const action = url.searchParams.get("action");
 
     if (!token || !action) {
       return new Response(
-        generateErrorPage('Invalid request', 'Missing token or action parameter'),
-        { headers: { ...corsHeaders, 'Content-Type': 'text/html' }, status: 400 }
-      )
+        generateErrorPage(
+          "Invalid request",
+          "Missing token or action parameter",
+        ),
+        {
+          headers: { ...corsHeaders, "Content-Type": "text/html" },
+          status: 400,
+        },
+      );
     }
 
     // Validate token
     const { data: tokenData, error: tokenError } = await supabase
-      .from('approval_tokens')
+      .from("approval_tokens")
       .select(`
         *,
         response_approvals:approval_id (
@@ -49,75 +56,111 @@ serve(async (req) => {
           )
         )
       `)
-      .eq('token', token)
-      .eq('action', action)
-      .is('used_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .single()
+      .eq("token", token)
+      .eq("action", action)
+      .is("used_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .single();
 
     if (tokenError || !tokenData) {
       return new Response(
-        generateErrorPage('Invalid Token', 'This approval link has expired or has already been used.'),
-        { headers: { ...corsHeaders, 'Content-Type': 'text/html' }, status: 400 }
-      )
+        generateErrorPage(
+          "Invalid Token",
+          "This approval link has expired or has already been used.",
+        ),
+        {
+          headers: { ...corsHeaders, "Content-Type": "text/html" },
+          status: 400,
+        },
+      );
     }
 
-    const approval = tokenData.response_approvals
+    const approval = tokenData.response_approvals;
 
     // Mark token as used
     await supabase
-      .from('approval_tokens')
+      .from("approval_tokens")
       .update({ used_at: new Date().toISOString() })
-      .eq('token', token)
+      .eq("token", token);
 
     // Update approval status
-    const newStatus = action === 'approve' ? 'approved' : 'rejected'
+    const newStatus = action === "approve" ? "approved" : "rejected";
     await supabase
-      .from('response_approvals')
-      .update({ 
+      .from("response_approvals")
+      .update({
         status: newStatus,
-        approved_by: 'email_approval',
-        approved_at: new Date().toISOString()
+        approved_by: "email_approval",
+        approved_at: new Date().toISOString(),
       })
-      .eq('id', approval.id)
+      .eq("id", approval.id);
 
-    // If approved, trigger email sending
-    if (action === 'approve') {
+    // If human-in-loop is disabled, skip post-approval sending (v1 simplified)
+    const humanInLoopEnabled =
+      (Deno.env.get("HUMAN_IN_LOOP_ENABLED") ?? "false").toLowerCase() ===
+        "true";
+    if (!humanInLoopEnabled) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          status: newStatus,
+          message: "Approval processed (HIL disabled, no send)",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // If approved, trigger sending the detailed AI email immediately
+    if (action === "approve") {
       try {
-        await supabase.functions.invoke('send-delayed-responses', {
+        // Look up tenant slug for email personalization
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("slug")
+          .eq("id", approval.tenant_id)
+          .single();
+
+        await supabase.functions.invoke("send-detailed-ai-email", {
           body: {
             feedback_id: approval.feedback_id,
-            force_send: true
-          }
-        })
+            guest_name: approval.feedback?.guest_name || "Guest",
+            guest_email: approval.feedback?.guest_email || "",
+            room_number: approval.feedback?.room_number || undefined,
+            rating: approval.feedback?.rating || 0,
+            feedback_text: approval.feedback?.comment || "",
+            tenant_id: approval.tenant_id,
+            tenant_slug: tenant?.slug || "eusbett",
+          },
+        });
       } catch (emailError) {
-        console.error('Failed to send approved response:', emailError)
+        console.error("Failed to send approved response:", emailError);
         // Continue - approval was successful even if email failed
       }
     }
 
     // Generate success page
-    const successPage = generateSuccessPage(action, approval)
-    
+    const successPage = generateSuccessPage(action, approval);
+
     return new Response(
       successPage,
-      { headers: { ...corsHeaders, 'Content-Type': 'text/html' }, status: 200 }
-    )
-
+      { headers: { ...corsHeaders, "Content-Type": "text/html" }, status: 200 },
+    );
   } catch (error) {
-    console.error('Approval processing error:', error)
+    console.error("Approval processing error:", error);
     return new Response(
-      generateErrorPage('Processing Error', 'An error occurred while processing your approval.'),
-      { headers: { ...corsHeaders, 'Content-Type': 'text/html' }, status: 500 }
-    )
+      generateErrorPage(
+        "Processing Error",
+        "An error occurred while processing your approval.",
+      ),
+      { headers: { ...corsHeaders, "Content-Type": "text/html" }, status: 500 },
+    );
   }
-})
+});
 
 function generateSuccessPage(action: string, approval: any): string {
-  const actionText = action === 'approve' ? 'APPROVED' : 'REJECTED'
-  const actionColor = action === 'approve' ? '#16a34a' : '#dc2626'
-  const actionIcon = action === 'approve' ? '✅' : '❌'
-  const feedback = approval.feedback
+  const actionText = action === "approve" ? "APPROVED" : "REJECTED";
+  const actionColor = action === "approve" ? "#16a34a" : "#dc2626";
+  const actionIcon = action === "approve" ? "✅" : "❌";
+  const feedback = approval.feedback;
 
   return `
     <!DOCTYPE html>
@@ -143,19 +186,24 @@ function generateSuccessPage(action: string, approval: any): string {
             </div>
             <div class="content">
                 <h3>Feedback Details:</h3>
-                <p><strong>Guest:</strong> ${feedback?.guest_name || 'Anonymous'}</p>
-                <p><strong>Room:</strong> ${feedback?.room_number || 'N/A'}</p>
-                <p><strong>Rating:</strong> ${feedback?.rating || 'N/A'}/5</p>
-                <p><strong>Comment:</strong> ${feedback?.comment || 'No comment'}</p>
-                
+                <p><strong>Guest:</strong> ${
+    feedback?.guest_name || "Anonymous"
+  }</p>
+                <p><strong>Room:</strong> ${feedback?.room_number || "N/A"}</p>
+                <p><strong>Rating:</strong> ${feedback?.rating || "N/A"}/5</p>
+                <p><strong>Comment:</strong> ${
+    feedback?.comment || "No comment"
+  }</p>
+
                 <h3>Risk Assessment:</h3>
                 <p>${approval.risk_explanation}</p>
-                
-                ${action === 'approve' ? 
-                  '<p style="color: #16a34a;"><strong>✅ The response has been approved and will be sent to the guest.</strong></p>' :
-                  '<p style="color: #dc2626;"><strong>❌ The response has been rejected and will NOT be sent to the guest.</strong></p>'
-                }
-                
+
+                ${
+    action === "approve"
+      ? '<p style="color: #16a34a;"><strong>✅ The response has been approved and will be sent to the guest.</strong></p>'
+      : '<p style="color: #dc2626;"><strong>❌ The response has been rejected and will NOT be sent to the guest.</strong></p>'
+  }
+
                 <p>Processed at: ${new Date().toLocaleString()}</p>
             </div>
             <div class="footer">
@@ -165,7 +213,7 @@ function generateSuccessPage(action: string, approval: any): string {
         </div>
     </body>
     </html>
-  `
+  `;
 }
 
 function generateErrorPage(title: string, message: string): string {
@@ -199,5 +247,5 @@ function generateErrorPage(title: string, message: string): string {
         </div>
     </body>
     </html>
-  `
+  `;
 }

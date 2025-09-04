@@ -1,6 +1,6 @@
 /**
  * 🔐 TENANT-SCOPED AUTHENTICATION PAGE
- * 
+ *
  * Secure authentication with tenant isolation
  * - Validates tenant before showing auth form
  * - Prevents cross-tenant authentication
@@ -17,12 +17,13 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/hooks/useAuth"
 import { useToast } from "@/hooks/use-toast"
-import { getTenantBySlug, validateTenantAccess } from "@/utils/tenant"
+import { getTenantBySlug, validateTenantComplete } from "@/utils/tenant"
 import { supabase } from "@/integrations/supabase/client"
-import { useTenantBranding } from "@/hooks/useTenantBranding"
+import { RequestAccessDialog } from "@/components/RequestAccessDialog"
 
-// Toggle this to enable/disable new signups
-const SIGNUPS_ENABLED = true
+
+// Toggle this to enable/disable new signups (disabled by default; approvals only)
+const SIGNUPS_ENABLED = false
 
 interface TenantAuthState {
   tenant: any | null
@@ -34,10 +35,12 @@ export default function TenantAuth() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>()
   const [searchParams] = useSearchParams()
   const returnUrl = searchParams.get('returnUrl')
-  
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [authLoading, setAuthLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+
   const [tenantState, setTenantState] = useState<TenantAuthState>({
     tenant: null,
     loading: true,
@@ -47,7 +50,6 @@ export default function TenantAuth() {
   const { signIn, signUp, user } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const branding = useTenantBranding()
 
   // Validate tenant on component mount and pre-fill email if provided
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function TenantAuth() {
 
     try {
       const tenant = await getTenantBySlug(tenantSlug)
-      
+
       if (!tenant) {
         setTenantState({
           tenant: null,
@@ -119,16 +121,22 @@ export default function TenantAuth() {
     }
   }
 
-  const handleAuthenticatedRedirect = async () => {
-    if (!user || !tenantState.tenant) return
+  const handleAuthenticatedRedirect = async (overrideUser?: { id: string; email?: string } | null) => {
+    const effectiveUser = overrideUser || user
+    if (!effectiveUser || !tenantState.tenant) {
+      console.warn('⚠️ Redirect aborted: missing user or tenant context', { hasUser: !!effectiveUser, hasTenant: !!tenantState.tenant })
+      setAuthLoading(false)
+      return
+    }
 
     try {
-      console.log('🔐 Starting authenticated redirect for user:', user.email)
+      console.log('🔐 Starting authenticated redirect for user:', effectiveUser.email)
       console.log('🏨 Tenant:', tenantState.tenant.name, tenantState.tenant.id)
 
       // Validate user has access to this tenant
       console.log('🔍 Validating tenant access...')
-      const hasAccess = await validateTenantAccess(tenantState.tenant.id)
+      const result = await validateTenantComplete(tenantSlug, effectiveUser.id)
+      const hasAccess = !!result?.hasAccess
       console.log('✅ Access validation result:', hasAccess)
 
       if (!hasAccess) {
@@ -148,7 +156,7 @@ export default function TenantAuth() {
       // Set tenant context
       console.log('🔧 Setting tenant context...')
       try {
-        await supabase.rpc('set_tenant_context', {
+        await (supabase as any).rpc('set_tenant_context', {
           p_tenant_id: tenantState.tenant.id,
           p_tenant_slug: tenantSlug
         })
@@ -188,7 +196,7 @@ export default function TenantAuth() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!email || !password) {
       toast({
         title: "Please fill in all fields",
@@ -228,7 +236,7 @@ export default function TenantAuth() {
 
           if (session?.user) {
             console.log('🚀 Session confirmed, forcing redirect...')
-            await handleAuthenticatedRedirect()
+            await handleAuthenticatedRedirect(session.user)
           } else {
             console.warn('⚠️ No session found after sign-in')
             setAuthLoading(false)
@@ -252,7 +260,7 @@ export default function TenantAuth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!email || !password) {
       toast({
         title: "Please fill in all fields",
@@ -274,7 +282,7 @@ export default function TenantAuth() {
     try {
       const { error } = await signUp(email, password)
       if (error) throw error
-      
+
       toast({
         title: "Account created!",
         description: "Please check your email to verify your account."
@@ -311,7 +319,7 @@ export default function TenantAuth() {
           <div className="text-red-500 text-6xl mb-4">🚫</div>
           <h1 className="text-2xl font-bold mb-2">Tenant Not Found</h1>
           <p className="text-muted-foreground mb-4">{tenantState.error}</p>
-          <button 
+          <button
             onClick={() => navigate('/')}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
@@ -352,7 +360,7 @@ export default function TenantAuth() {
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               {SIGNUPS_ENABLED && <TabsTrigger value="signup">Sign Up</TabsTrigger>}
             </TabsList>
-            
+
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
@@ -368,26 +376,58 @@ export default function TenantAuth() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <Button type="button" variant="outline" onClick={() => setShowPassword((s) => !s)}>
+                      {showPassword ? 'Hide' : 'Show'}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <label className="inline-flex items-center gap-2 select-none">
+                      <input type="checkbox" defaultChecked className="accent-current" />
+                      Remember me
+                    </label>
+                    <button type="button" className="text-primary hover:underline" onClick={async () => {
+                      if (!email) {
+                        toast({ title: 'Enter your email first', variant: 'destructive' })
+                        return
+                      }
+                      try {
+                        const redirectTo = `${window.location.origin}/${tenantSlug}/reset-password`
+                        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+                        if (error) throw error
+                        toast({ title: 'Reset link sent', description: `Check ${email} for the link` })
+                      } catch (err: any) {
+                        toast({ title: 'Could not send reset link', description: err?.message || 'Try again later', variant: 'destructive' })
+                      }
+                    }}>
+                      Forgot password?
+                    </button>
+                  </div>
                 </div>
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={authLoading}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={authLoading || tenantState.loading}
                   style={{ backgroundColor: tenant.primary_color }}
                 >
+
+	              <div className="mt-4 text-center">
+	                <RequestAccessDialog tenantSlug={tenantSlug!} tenantId={tenant.id} emailPrefill={email} triggerText="Request access instead" />
+	              </div>
+
                   {authLoading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
             </TabsContent>
-            
+
             {SIGNUPS_ENABLED && (
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
@@ -413,9 +453,9 @@ export default function TenantAuth() {
                       required
                     />
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
+                  <Button
+                    type="submit"
+                    className="w-full"
                     disabled={authLoading}
                     style={{ backgroundColor: tenant.primary_color }}
                   >
